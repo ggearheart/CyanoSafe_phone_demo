@@ -4,6 +4,13 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>CyanoSafe CA — HAB Safety Map</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#003368"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="CyanoSafe"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
 <style>
 :root{
   /* Colorblind-safe advisory palette — WCAG AA with white text (min 4.5:1) */
@@ -1200,6 +1207,14 @@ new ResizeObserver(resize).observe(document.getElementById('map-wrap'));
     correctLevel: QRCode.CorrectLevel.M
   });
 })();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/CyanoSafe_phone_demo/sw.js')
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
 </script>
 </body>
 </html>

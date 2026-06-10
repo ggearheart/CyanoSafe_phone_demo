@@ -1,0 +1,27 @@
+{
+  "name": "CyanoSafe CA — HAB Safety Map",
+  "short_name": "CyanoSafe",
+  "description": "California harmful algal bloom (HAB) safety map — real-time advisory levels for water bodies statewide.",
+  "start_url": "/CyanoSafe_phone_demo/",
+  "scope": "/CyanoSafe_phone_demo/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#003368",
+  "theme_color": "#003368",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "utilities"],
+  "lang": "en-US"
+}
