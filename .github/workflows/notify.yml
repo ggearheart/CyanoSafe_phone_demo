@@ -1,0 +1,34 @@
+name: Send HAB Advisory Notifications
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # every 6 hours
+  workflow_dispatch:          # allow manual trigger from GitHub Actions UI
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install httpx python-dotenv
+
+      - name: Run notification dispatcher
+        env:
+          SUPABASE_URL:        ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SMTP_HOST:           ${{ secrets.SMTP_HOST }}
+          SMTP_PORT:           ${{ secrets.SMTP_PORT }}
+          SMTP_USER:           ${{ secrets.SMTP_USER }}
+          SMTP_PASS:           ${{ secrets.SMTP_PASS }}
+          FROM_EMAIL:          ${{ secrets.FROM_EMAIL }}
+          TWILIO_ACCOUNT_SID:  ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN:   ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM_NUMBER:  ${{ secrets.TWILIO_FROM_NUMBER }}
+          APP_URL:             https://ggearheart.github.io/CyanoSafe_phone_demo/
+        run: python notify.py

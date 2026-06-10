@@ -307,6 +307,12 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
   </div>
 </div>
 <script>
+// ── SUPABASE CONFIG ───────────────────────────────────────────────────────────
+// Create a free project at https://supabase.com and paste your credentials here.
+// Run supabase_schema.sql in the Supabase SQL editor to create the subscriptions table.
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';        // e.g. https://abcdef.supabase.co
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
 let RAW = [];
 
 // ── CLASSIFY ──────────────────────────────────────────────────────────────────
@@ -719,6 +725,8 @@ function closeSign(){
 function showWaterBodyPopup(name){
   const records = RAW.filter(x => x.name === name)
     .sort((a,b) => (b.obs||'').localeCompare(a.obs||''));
+  const ref = records.find(r => r.lat && r.lon);
+  _subCtx = {name, lat: ref?.lat ?? null, lon: ref?.lon ?? null, scope: 'waterbody'};
   const existing = document.getElementById('wb-popup-overlay');
   if(existing) existing.remove();
 
@@ -768,6 +776,29 @@ function showWaterBodyPopup(name){
         </table>
       </div>
       <div id="wb-sfei-section"></div>
+      <div id="wb-subscribe-section" style="border-top:2px solid #e2e8f0;padding:16px 18px 18px;">
+        <div style="font-weight:700;font-size:.9rem;color:var(--ca-blue);margin-bottom:4px;">🔔 Get Advisory Alerts</div>
+        <div style="font-size:.75rem;color:#64748b;margin-bottom:12px;line-height:1.45;">Receive notifications when advisory status changes for this water body or nearby locations.</div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;" id="wb-scope-btns">
+          <button class="scope-btn active" data-scope="waterbody" onclick="setSubScope(this)"
+            style="flex:1;padding:7px 4px;border:1px solid var(--ca-blue);border-radius:6px;background:var(--ca-blue);color:#fff;font-size:.75rem;font-weight:600;cursor:pointer;touch-action:manipulation;">
+            📍 This water body
+          </button>
+          <button class="scope-btn" data-scope="proximity" onclick="setSubScope(this)"
+            style="flex:1;padding:7px 4px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--sub);font-size:.75rem;font-weight:600;cursor:pointer;touch-action:manipulation;">
+            📡 Within 10 miles
+          </button>
+        </div>
+        <input id="wb-sub-email" type="email" autocomplete="email" placeholder="📧 Email address"
+          style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;margin-bottom:7px;outline:none;"/>
+        <input id="wb-sub-phone" type="tel" autocomplete="tel" placeholder="📱 Phone number (optional, for SMS)"
+          style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;margin-bottom:10px;outline:none;"/>
+        <button id="wb-sub-btn" onclick="submitSubscription()" touch-action="manipulation"
+          style="width:100%;padding:10px;background:var(--ca-blue);color:#fff;border:none;border-radius:6px;font-size:.85rem;font-weight:700;cursor:pointer;touch-action:manipulation;">
+          Subscribe to Alerts
+        </button>
+        <div id="wb-sub-msg" style="display:none;margin-top:9px;padding:9px 12px;border-radius:6px;font-size:.8rem;line-height:1.4;"></div>
+      </div>
     </div>`;
   overlay.addEventListener('click', () => overlay.remove());
   document.body.appendChild(overlay);
@@ -1152,6 +1183,91 @@ function setLang(l, btn){
   });
   renderList(filtered);
   renderStats(filtered);
+}
+
+// ── SUBSCRIPTIONS ─────────────────────────────────────────────────────────────
+let _subCtx = {name:'', lat:null, lon:null, scope:'waterbody'};
+
+function setSubScope(btn){
+  _subCtx.scope = btn.dataset.scope;
+  document.querySelectorAll('#wb-scope-btns .scope-btn').forEach(b => {
+    const active = b === btn;
+    b.style.background = active ? 'var(--ca-blue)' : 'var(--bg)';
+    b.style.color = active ? '#fff' : 'var(--sub)';
+    b.style.borderColor = active ? 'var(--ca-blue)' : 'var(--border)';
+  });
+}
+
+async function submitSubscription(){
+  const email = (document.getElementById('wb-sub-email')?.value || '').trim();
+  const phone = (document.getElementById('wb-sub-phone')?.value || '').trim();
+  const msg   = document.getElementById('wb-sub-msg');
+  const btn   = document.getElementById('wb-sub-btn');
+
+  if(!email && !phone){
+    showSubMsg('Please enter an email address or phone number.', 'error'); return;
+  }
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    showSubMsg('Please enter a valid email address.', 'error'); return;
+  }
+
+  const configured = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
+  const token = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+
+  const payload = {
+    type: _subCtx.scope,
+    waterbody_name: _subCtx.name,
+    lat: _subCtx.lat,
+    lon: _subCtx.lon,
+    radius_miles: _subCtx.scope === 'proximity' ? 10 : null,
+    email: email || null,
+    phone: phone || null,
+    unsubscribe_token: token,
+  };
+
+  btn.disabled = true;
+  btn.textContent = 'Subscribing…';
+
+  if(configured){
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/subscriptions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      showSubMsg('✅ Subscribed! You\'ll be notified when the advisory status changes' +
+        (_subCtx.scope === 'proximity' ? ' for water bodies within 10 miles.' : ' for ' + _subCtx.name + '.'), 'success');
+      btn.textContent = 'Subscribed ✓';
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = 'Subscribe to Alerts';
+      showSubMsg('⚠️ Could not save subscription. Please try again.', 'error');
+    }
+  } else {
+    // Supabase not configured — show setup prompt
+    btn.disabled = false;
+    btn.textContent = 'Subscribe to Alerts';
+    showSubMsg('ℹ️ Notifications require Supabase setup. See README for instructions.', 'info');
+  }
+}
+
+function showSubMsg(text, type){
+  const el = document.getElementById('wb-sub-msg');
+  if(!el) return;
+  const styles = {
+    success: 'background:#f0fdf4;border:1px solid #86efac;color:#166534;',
+    error:   'background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;',
+    info:    'background:#eff6ff;border:1px solid #93c5fd;color:#1e40af;',
+  };
+  el.style.cssText = `display:block;margin-top:9px;padding:9px 12px;border-radius:6px;font-size:.8rem;line-height:1.4;${styles[type]||styles.info}`;
+  el.textContent = text;
 }
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
