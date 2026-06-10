@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CyanoSafe CA — HAB Safety Map</title>
+<style>
+:root{
+  /* Colorblind-safe advisory palette — WCAG AA with white text (min 4.5:1) */
+  /* Okabe-Ito / IBM colorblind-safe hues, darkened for badge contrast       */
+  --danger:#B91C1C;   /* red-700     ~9:1 */
+  --warning:#C2410C;  /* orange-700  ~7.8:1 */
+  --caution:#A16207;  /* amber-700   ~7.2:1 — avoids yellow/white fail */
+  --watch:#1D4ED8;    /* blue-700    ~8:1   — replaces teal-green */
+  --mat:#7E22CE;      /* purple-700  ~9:1   — distinct from all above */
+  --other:#374151;    /* gray-700    ~10:1  */
+  --ca-blue:#003368; --ca-gold:#FDB913;
+  --bg:#F0F4F8; --white:#fff; --text:#1a2332; --sub:#4B5563; --border:#d0d8e4;
+  --radius:8px;
+}
+/* Keyboard focus visibility — WCAG 2.4.11 */
+:focus-visible{outline:3px solid var(--ca-blue);outline-offset:2px;border-radius:2px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:var(--bg);
+     color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+header{background:var(--ca-blue);color:#fff;padding:0 16px;height:52px;
+       display:flex;align-items:center;justify-content:space-between;
+       flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.35);z-index:100;}
+.hdr-brand{display:flex;align-items:center;gap:10px;}
+.hdr-title{font-size:.98rem;font-weight:700;line-height:1.2;}
+.hdr-title small{display:block;font-size:.68rem;font-weight:400;opacity:.8;}
+.hdr-right{display:flex;gap:6px;align-items:center;}
+.lang-btn{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;
+          padding:4px 11px;border-radius:4px;cursor:pointer;font-size:.78rem;font-weight:500;}
+.lang-btn.active{background:var(--ca-gold);border-color:var(--ca-gold);color:#000;}
+.app-body{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:300px;background:#fff;border-right:1px solid var(--border);
+         display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
+.sb-scroll{overflow-y:auto;flex:1;padding:10px 12px;}
+.sb-label{font-size:.67rem;text-transform:uppercase;letter-spacing:.08em;
+          color:var(--sub);margin:12px 0 4px;font-weight:700;}
+.sb-label:first-child{margin-top:0;}
+.search-box{width:100%;padding:6px 9px;border:1px solid var(--border);
+            border-radius:var(--radius);font-size:.83rem;outline:none;
+            margin-bottom:7px;background:var(--bg);}
+.search-box:focus{border-color:var(--ca-blue);}
+select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
+              border-radius:var(--radius);font-size:.81rem;outline:none;
+              margin-bottom:7px;background:var(--bg);cursor:pointer;}
+.stats-bar{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;}
+.stat-card{background:var(--bg);border-radius:6px;padding:7px 9px;text-align:center;border:1px solid var(--border);}
+.stat-num{font-size:1.25rem;font-weight:800;color:var(--ca-blue);line-height:1;}
+.stat-lbl{font-size:.64rem;color:var(--sub);margin-top:2px;}
+.legend{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;}
+.leg-row{display:flex;align-items:center;gap:7px;font-size:.75rem;cursor:pointer;
+         padding:3px 5px;border-radius:4px;}
+.leg-row:hover{background:var(--bg);}
+.leg-row.dimmed{opacity:.35;}
+.leg-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,.1);}
+.leg-count{margin-left:auto;color:var(--sub);font-size:.7rem;font-weight:600;}
+.bloom-list{display:flex;flex-direction:column;gap:4px;}
+.bloom-card{border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;
+            cursor:pointer;border-left:4px solid var(--other);transition:box-shadow .12s;}
+.bloom-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.bloom-card.adv-Danger{border-left-color:var(--danger);}
+.bloom-card.adv-Warning{border-left-color:var(--warning);}
+.bloom-card.adv-Caution{border-left-color:var(--caution);}
+.bloom-card.adv-Watch{border-left-color:var(--watch);}
+.bloom-card.adv-Mat{border-left-color:var(--mat);}
+.bloom-name{font-size:.83rem;font-weight:700;}
+.bloom-meta{font-size:.7rem;color:var(--sub);margin-top:1px;}
+.bloom-badge{display:inline-block;padding:2px 7px;border-radius:12px;font-size:.66rem;
+             font-weight:700;text-transform:uppercase;color:#fff;margin-top:3px;}
+.no-results{text-align:center;padding:20px 10px;color:var(--sub);font-size:.82rem;}
+/* MAP AREA */
+#map-wrap{flex:1;position:relative;overflow:hidden;background:#e8edf2;}
+#map-canvas{position:absolute;top:0;left:0;cursor:grab;}
+#map-canvas.dragging{cursor:grabbing;}
+/* TOOLTIP */
+#tooltip{position:fixed;background:#fff;border:1px solid var(--border);
+         border-radius:var(--radius);padding:10px 13px;pointer-events:none;
+         display:none;z-index:1000;max-width:280px;box-shadow:0 4px 16px rgba(0,0,0,.15);
+         font-size:.78rem;line-height:1.5;}
+#tooltip h3{font-size:.9rem;font-weight:800;color:var(--ca-blue);margin-bottom:5px;}
+#tooltip .t-badge{display:inline-block;padding:2px 8px;border-radius:12px;
+                  font-size:.68rem;font-weight:700;text-transform:uppercase;
+                  color:#fff;margin-bottom:6px;}
+#tooltip table{border-collapse:collapse;width:100%;}
+#tooltip td{padding:2px 0;vertical-align:top;}
+#tooltip td:first-child{color:var(--sub);padding-right:8px;font-weight:600;width:36%;white-space:nowrap;}
+#tooltip .guidance{margin-top:7px;padding:7px 9px;border-radius:5px;font-size:.74rem;line-height:1.5;}
+.g-Danger{background:#FEF2F2;border-left:3px solid var(--danger);}
+.g-Warning{background:#FFF7ED;border-left:3px solid var(--warning);}
+.g-Caution{background:#FFFBEB;border-left:3px solid var(--caution);}
+.g-Watch,.g-Mat,.g-Other{background:#EFF6FF;border-left:3px solid var(--watch);}
+#tooltip .guidance strong{display:block;margin-bottom:2px;}
+/* MAP CONTROLS */
+.map-controls{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:5px;z-index:40;}
+.map-btn{width:32px;height:32px;background:#fff;border:1px solid var(--border);
+         border-radius:6px;cursor:pointer;font-size:1.1rem;display:flex;
+         align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.12);}
+.map-btn:hover{background:var(--bg);}
+.map-legend-wrap{position:absolute;bottom:10px;left:10px;background:rgba(255,255,255,.92);
+                 border:1px solid var(--border);border-radius:6px;padding:8px 10px;
+                 font-size:.72rem;z-index:40;}
+.map-leg-row{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.map-leg-row:last-child{margin-bottom:0;}
+.map-leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.day-btn{flex:1;padding:5px 0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--sub);}
+.day-btn:hover{background:#e2e8f0;}
+.day-btn.active{background:var(--ca-blue);border-color:var(--ca-blue);color:#fff;}
+@media print{body>*:not(#sign-overlay){display:none!important;}#sign-overlay{position:static!important;}#sign-backdrop{position:static!important;background:none!important;padding:0!important;display:block!important;}.no-print{display:none!important;}}
+#tooltip .qr-wrap{display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:7px;border-top:1px solid var(--border);}
+#tooltip .qr-wrap canvas{border-radius:4px;}
+#tooltip .qr-label{font-size:.64rem;color:var(--sub);line-height:1.4;}
+#tooltip .qr-label strong{display:block;color:var(--text);font-size:.7rem;}
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<header>
+  <div class="hdr-brand">
+    <img src="waterboards-logo.png" alt="California Water Boards / SWAMP" style="height:38px;object-fit:contain;display:block;">
+  </div>
+  <div class="hdr-right">
+    <a href="https://mywaterquality.ca.gov/cyanohab/" target="_blank" rel="noopener"
+       style="color:#FDB913;font-size:0.75rem;font-weight:600;text-decoration:none;margin-right:10px;white-space:nowrap;opacity:0.9;">
+      CA CyanoHAB ↗
+    </a>
+    <button class="lang-btn active" onclick="setLang('en',this)">EN</button>
+    <button class="lang-btn" onclick="setLang('es',this)">ES</button>
+  </div>
+</header>
+<div class="app-body">
+  <div class="sidebar">
+    <div class="sb-scroll">
+      <div class="sb-label" id="lbl-search">Search</div>
+      <input class="search-box" id="search" type="search" placeholder="Water body, location or county…" oninput="applyFilters()"/>
+      <div class="sb-label" id="lbl-adv">Advisory Level</div>
+      <div class="legend" id="legend"></div>
+      <div class="sb-label" id="lbl-status">Status</div>
+      <select class="filter" id="fStatus" onchange="applyFilters()">
+        <option value="">All statuses</option>
+        <option value="Open">Open</option>
+        <option value="Ongoing">Ongoing</option>
+        <option value="Re-opened">Re-opened</option>
+        <option value="Closed">Closed</option>
+      </select>
+      <div class="sb-label" id="lbl-county">County</div>
+      <select class="filter" id="fCounty" onchange="applyFilters()"></select>
+      <div class="sb-label" id="lbl-rwb">Regional Water Board</div>
+      <select class="filter" id="fRWB" onchange="applyFilters()"></select>
+      <div class="sb-label">Date Range</div>
+      <div style="display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap;">
+        <button class="day-btn" onclick="setDays(30,this)">30d</button>
+        <button class="day-btn" onclick="setDays(60,this)">60d</button>
+        <button class="day-btn" onclick="setDays(90,this)">90d</button>
+        <button class="day-btn" onclick="setDays(120,this)">120d</button>
+        <button class="day-btn" onclick="setDays(180,this)">180d</button>
+        <button class="day-btn" onclick="setDays(365,this)">1yr</button>
+        <button class="day-btn" onclick="setDays(730,this)">2yr</button>
+        <button class="day-btn" onclick="setDays(0,this)">All</button>
+      </div>
+      <div style="display:flex;gap:5px;margin-bottom:7px;align-items:center;">
+        <input type="date" id="fDateFrom" class="filter" style="flex:1;padding:5px 6px;margin-bottom:0;" onchange="clearDayBtns();applyFilters()"/>
+        <span style="color:var(--sub);font-size:.75rem;flex-shrink:0;">–</span>
+        <input type="date" id="fDateTo" class="filter" style="flex:1;padding:5px 6px;margin-bottom:0;" onchange="clearDayBtns();applyFilters()"/>
+      </div>
+      <div class="sb-label">Cyanotoxins</div>
+      <button id="toxinBtn" onclick="toggleToxinFilter(this)" style="width:100%;margin-bottom:5px;padding:6px 0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--sub);">🧪 Show toxin-confirmed only</button>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px;" id="toxinTypeBtns">
+        <button class="toxin-type-btn" data-type="Microcystins" onclick="toggleToxinType(this)" style="padding:3px 8px;border:1px solid var(--border);border-radius:12px;background:var(--bg);cursor:pointer;font-size:.71rem;font-weight:600;color:var(--sub);">Microcystins</button>
+        <button class="toxin-type-btn" data-type="Anatoxins" onclick="toggleToxinType(this)" style="padding:3px 8px;border:1px solid var(--border);border-radius:12px;background:var(--bg);cursor:pointer;font-size:.71rem;font-weight:600;color:var(--sub);">Anatoxins</button>
+        <button class="toxin-type-btn" data-type="Cylindrospermopsin" onclick="toggleToxinType(this)" style="padding:3px 8px;border:1px solid var(--border);border-radius:12px;background:var(--bg);cursor:pointer;font-size:.71rem;font-weight:600;color:var(--sub);">Cylindrospermopsin</button>
+        <button class="toxin-type-btn" data-type="Saxitoxin" onclick="toggleToxinType(this)" style="padding:3px 8px;border:1px solid var(--border);border-radius:12px;background:var(--bg);cursor:pointer;font-size:.71rem;font-weight:600;color:var(--sub);">Saxitoxin</button>
+      </div>
+      <div class="sb-label">Health Reports</div>
+      <button id="illnessBtn" onclick="toggleIllnessFilter(this)" style="width:100%;margin-bottom:7px;padding:6px 0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--sub);">🤒 Illness Reported</button>
+      <div class="stats-bar" id="statsBar"></div>
+      <button id="downloadBtn" onclick="downloadFiltered()" style="width:100%;margin-bottom:7px;padding:6px 0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--sub);">⬇ Download Filtered CSV</button>
+      <!-- Report a Bloom section -->
+      <details id="report-bloom-details" style="margin-bottom:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);overflow:hidden;">
+        <summary style="padding:8px 12px;cursor:pointer;font-size:.75rem;font-weight:700;color:var(--ca-blue);list-style:none;display:flex;align-items:center;gap:6px;user-select:none;">
+          <span>📋</span><span>Report a Bloom</span><span style="margin-left:auto;font-size:.85em;opacity:.6;">▾</span>
+        </summary>
+        <div style="padding:10px 12px 12px;border-top:1px solid var(--border);">
+          <p style="margin:0 0 8px;font-size:.72rem;color:var(--sub);line-height:1.5;">
+            Observed a bloom? Report it to the <strong>CA State Water Board FHAB Program</strong> — reports help protect public health.
+          </p>
+          <ol style="margin:0 0 10px;padding-left:18px;font-size:.72rem;color:var(--sub);line-height:1.8;">
+            <li>Go to the CA Water Boards FHAB page</li>
+            <li>Click <strong>"Submit a Bloom Report"</strong></li>
+            <li>Fill in location, date, and photos</li>
+            <li>Submit — staff will follow up</li>
+          </ol>
+          <a href="https://www.waterboards.ca.gov/water_issues/programs/swamp/freshwater_cyanobacteria.html"
+             target="_blank" rel="noopener"
+             style="display:block;text-align:center;padding:7px;background:var(--ca-blue);color:#fff;border-radius:var(--radius);font-size:.75rem;font-weight:700;text-decoration:none;margin-bottom:10px;">
+            Open FHAB Reporting Page ↗
+          </a>
+          <div style="text-align:center;">
+            <div id="report-qr" style="display:inline-block;"></div>
+            <div style="font-size:.65rem;color:var(--sub);margin-top:4px;">Scan to open on your phone</div>
+          </div>
+        </div>
+      </details>
+      <div class="sb-label">Bloom Reports <span id="listCount" style="font-weight:400;color:var(--sub)"></span></div>
+      <div class="bloom-list" id="bloomList"></div>
+    </div>
+  </div>
+  <div id="map-wrap">
+    <div id="map-canvas" style="position:absolute;inset:0;"></div>
+    <div id="tooltip"></div>
+  </div>
+</div>
+<script>
+let RAW = [];
+
+// ── CLASSIFY ──────────────────────────────────────────────────────────────────
+function classifyAdv(adv){
+  if(!adv) return 'Other';
+  const a = adv.toLowerCase();
+  if(a.includes('danger')) return 'Danger';
+  if(a.includes('warning')) return 'Warning';
+  if(a.includes('caution')) return 'Caution';
+  if(a.includes('mat')||a.includes('benthic')) return 'Mat';
+  if(a.includes('awareness')||a.includes('watch')) return 'Watch';
+  return 'Other';
+}
+const ADV = {
+  Danger:  {color:'#B91C1C',label:'Danger',       label_es:'Peligro',       order:0, r:9},
+  Warning: {color:'#C2410C',label:'Warning',      label_es:'Advertencia',   order:1, r:8},
+  Caution: {color:'#A16207',label:'Caution',      label_es:'Precaución',    order:2, r:7},
+  Watch:   {color:'#1D4ED8',label:'Watch/Awareness',label_es:'Vigilancia',  order:3, r:6},
+  Mat:     {color:'#7E22CE',label:'Algal Mat',    label_es:'Tapete Algal',  order:4, r:6},
+  Other:   {color:'#374151',label:'Informational',label_es:'Informativo',   order:5, r:5},
+};
+const GUIDANCE = {
+  en:{
+    Danger: {hdr:'⛔ DANGER — Do Not Enter Water',body:'Keep children and pets out of the water. Toxins can be fatal to pets within minutes.'},
+    Warning:{hdr:'⚠️ WARNING — Avoid Water Contact',body:'No swimming or wading. Keep pets away. Rinse immediately if exposed.'},
+    Caution:{hdr:'🟡 CAUTION — Limited Contact',body:'Avoid swallowing water. No swimming for children or pets. Rinse after contact.'},
+    Watch:  {hdr:'🟢 WATCH — Stay Alert',body:'A bloom has been observed. Avoid contact with visible scum or discolored water.'},
+    Mat:    {hdr:'🟤 ALGAL MAT — Do Not Touch',body:'Benthic mat detected. Do not let children or pets touch bottom sediment.'},
+    Other:  {hdr:'ℹ️ INFORMATIONAL',body:'Monitoring in progress. Check back for updates before water activities.'},
+  },
+  es:{
+    Danger: {hdr:'⛔ PELIGRO — No Entre al Agua',body:'Mantenga niños y mascotas fuera del agua. Las toxinas pueden ser fatales en minutos.'},
+    Warning:{hdr:'⚠️ ADVERTENCIA — Evite Contacto',body:'No nadar ni vadear. Mantenga mascotas alejadas. Enjuáguese si se expone.'},
+    Caution:{hdr:'🟡 PRECAUCIÓN — Contacto Limitado',body:'Evite tragar agua. Sin natación para niños ni mascotas. Enjuáguese después.'},
+    Watch:  {hdr:'🟢 VIGILANCIA — Esté Alerta',body:'Se observó una floración. Evite contacto con espuma o agua decolorada.'},
+    Mat:    {hdr:'🟤 TAPETE ALGAL — No Toque',body:'Tapete bentónico detectado. No permita que niños o mascotas toquen el sedimento.'},
+    Other:  {hdr:'ℹ️ INFORMATIVO',body:'Monitoreo en progreso. Consulte antes de actividades acuáticas.'},
+  }
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let lang = 'en';
+let filtered = [];
+let advFilter = new Set();
+let toxinOnly = false;
+let toxinTypeFilter = new Set();
+let illnessOnly = false;
+
+// Classify all records once
+RAW.forEach(r => r._adv = classifyAdv(r.adv));
+
+// ── MAP ENGINE (Leaflet) ───────────────────────────────────────────────────────
+const map = L.map('map-canvas', {zoomControl: false}).setView([37.5, -119.5], 6);
+
+L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'USGS National Map | CA Water Boards FHAB',
+  opacity: 0.4,
+  maxZoom: 16,
+  minZoom: 5,
+}).addTo(map);
+
+L.control.zoom({position:'topright'}).addTo(map);
+
+let markerLayer = L.layerGroup().addTo(map);
+
+function draw(){
+  markerLayer.clearLayers();
+  const sorted = [...filtered].sort((a,b) => ADV[a._adv].order - ADV[b._adv].order);
+  sorted.forEach(r => {
+    const m = ADV[r._adv];
+    const circle = L.circleMarker([r.lat, r.lon], {
+      radius: m.r,
+      fillColor: m.color,
+      fillOpacity: r.status === 'Closed' ? 0.3 : 0.8,
+      color: '#fff',
+      weight: 1.5,
+      pane: 'markerPane'
+    });
+    circle.on('mouseover', e => {
+      if(!pinnedTip) showTooltip(r, e.originalEvent.clientX, e.originalEvent.clientY);
+    });
+    circle.on('mouseout', () => {
+      if(!pinnedTip) tip.style.display = 'none';
+    });
+    circle.on('click', e => {
+      L.DomEvent.stopPropagation(e);
+      e.originalEvent.stopPropagation();
+      activeBloom = r;
+      pinnedTip = true;
+      showTooltip(r, e.originalEvent.clientX, e.originalEvent.clientY, true);
+    });
+    circle.addTo(markerLayer);
+  });
+}
+
+map.on('click', () => {
+  if(pinnedTip){ pinnedTip = false; tip.style.display = 'none'; }
+});
+
+function flyTo(lat, lon){
+  map.setView([lat, lon], Math.max(map.getZoom(), 11));
+}
+
+function resize(){ map.invalidateSize(); }
+
+// ── HOVER / TOOLTIP ────────────────────────────────────────────────────────────
+const tip = document.getElementById('tooltip');
+let pinnedTip = false;
+
+function showTooltip(r, cx, cy, pinned){
+  const m = ADV[r._adv];
+  const g = GUIDANCE[lang][r._adv];
+  const obs = r.obs ? r.obs.split('T')[0] : '—';
+  const rows = [
+    [lang==='en'?'County':'Condado', r.county||'—'],
+    [lang==='en'?'Region':'Región', (r.rwb||'—').replace('Region ','R')],
+    [lang==='en'?'Observed':'Observado', obs],
+    [lang==='en'?'Status':'Estado', r.status||'—'],
+    r.size ? [lang==='en'?'Size':'Tamaño', r.size] : null,
+    r.texture ? [lang==='en'?'Texture':'Textura', r.texture] : null,
+    r.toxin_types ? ['Toxin Types', r.toxin_types.join(', ')] : null,
+  ].filter(Boolean);
+
+  const qrUrl = `${location.origin}${location.pathname}?id=${encodeURIComponent(r.id||'')}`;
+  const wbCount = RAW.filter(x => x.name === r.name).length;
+  const toxinBadge = r.toxin
+    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#7c3aed;color:#fff;font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:4px;">🧪 Cyanotoxins detected</span>`
+    : '';
+  const illnessBadge = r.illness
+    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#b91c1c;color:#fff;font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:4px;">🤒 Illness reported</span>`
+    : '';
+  tip.innerHTML = `
+    <h3>${r.name||'Unknown water body'}</h3>
+    <a href="#" id="wb-summary-link" style="pointer-events:auto;display:inline-block;font-size:.72rem;color:var(--ca-blue);text-decoration:none;margin-bottom:4px;">📋 ${wbCount} record${wbCount===1?'':'s'} for this water body</a>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:4px;">
+      <span class="t-badge" style="background:${m.color};margin:0;">${lang==='en'?m.label:m.label_es}</span>${toxinBadge}${illnessBadge}
+    </div>
+    <table>${rows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
+    <div class="guidance g-${r._adv}"><strong>${g.hdr}</strong>${g.body}</div>
+    ${r.detail ? `<div style="margin-top:7px;padding:7px 9px;background:#f8fafc;border-left:3px solid #cbd5e1;border-radius:0 4px 4px 0;font-size:.72rem;color:#475569;line-height:1.5;"><strong style="display:block;margin-bottom:2px;color:#334155;">Advisory Basis</strong>${r.detail}</div>` : ''}
+    <div class="qr-wrap">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=64x64&margin=2&data=${encodeURIComponent(qrUrl)}" width="64" height="64" alt="QR code" style="border-radius:4px;"/>
+      <div class="qr-label"><strong>Scan for current info</strong>Scan to view live HAB alerts<br>for this water body</div>
+    </div>
+    <button onclick="printSign()" style="pointer-events:auto;margin-top:8px;width:100%;padding:6px;border:1px solid var(--ca-blue);border-radius:var(--radius);background:var(--ca-blue);color:#fff;cursor:pointer;font-size:.75rem;font-weight:700;">🖨️ Print Advisory Sign</button>
+  `;
+  tip.style.display = 'block';
+  tip.style.pointerEvents = pinned ? 'auto' : 'none';
+  const wbLink = document.getElementById('wb-summary-link');
+  if(wbLink) wbLink.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); showWaterBodyPopup(r.name); });
+  const tw = 290, th = 220;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  tip.style.left = (cx + tw + 12 > vw ? cx - tw - 8 : cx + 12) + 'px';
+  tip.style.top  = (cy + th + 12 > vh ? cy - th    : cy + 12) + 'px';
+}
+document.addEventListener('click', e => {
+  if(!tip.contains(e.target)) { pinnedTip = false; tip.style.display='none'; }
+});
+
+// ── SIGN CONTENT per advisory level (matching CA FHAB official templates) ─────
+const SIGN = {
+  Danger: {
+    color:'#B91C1C', bg:'#FEF2F2',
+    en: {
+      level:'DANGER', headline:'HARMFUL ALGAL BLOOM',
+      sub:'Stay out of the water until further notice.',
+      items:[
+        {icon:'🚫🏊',text:'No swimming, wading, or water sports'},
+        {icon:'🚫🐕',text:'Keep pets and animals out of and away from the water'},
+        {icon:'🚫🐟',text:'Do not eat fish, shellfish, or other animals from this water'},
+        {icon:'🚫💧',text:'Do not drink, cook with, or wash dishes with this water'},
+        {icon:'⚠️',   text:'Boiling or filtering does NOT remove toxins'},
+        {icon:'🚿',   text:'Rinse with clean water if skin contact occurs'},
+      ],
+      footer:'If you or your pet feel ill after contact with this water, seek medical/veterinary attention immediately.'
+    },
+    es: {
+      level:'PELIGRO', headline:'FLORACIÓN DAÑINA DE ALGAS',
+      sub:'No entre al agua hasta nuevo aviso.',
+      items:[
+        {icon:'🚫🏊',text:'No nadar, vadear ni hacer deportes acuáticos'},
+        {icon:'🚫🐕',text:'No permita que mascotas o animales entren o beban el agua'},
+        {icon:'🚫🐟',text:'No coma peces, mariscos ni otros animales de esta agua'},
+        {icon:'🚫💧',text:'No beba, cocine ni lave con esta agua'},
+        {icon:'⚠️',   text:'Hervir o filtrar NO elimina las toxinas'},
+        {icon:'🚿',   text:'Enjuáguese con agua limpia si hay contacto con la piel'},
+      ],
+      footer:'Si usted o su mascota se sienten mal después del contacto, busque atención médica/veterinaria de inmediato.'
+    }
+  },
+  Warning: {
+    color:'#C2410C', bg:'#FFF7ED',
+    en: {
+      level:'WARNING', headline:'HARMFUL ALGAL BLOOM',
+      sub:'No swimming. Stay away from scum and discolored water.',
+      items:[
+        {icon:'🚫🏊',text:'No swimming or wading'},
+        {icon:'🚫🐕',text:'Keep pets and animals out of and away from the water'},
+        {icon:'⚠️🐟',text:'Avoid eating fish or shellfish from this water body'},
+        {icon:'🚫💧',text:'Do not drink, cook with, or wash dishes with this water'},
+        {icon:'⚠️',   text:'Boiling or filtering does NOT remove toxins'},
+        {icon:'🚿',   text:'Rinse with clean water if skin contact occurs'},
+      ],
+      footer:'People and animals exposed to bloom water may experience illness. Seek medical/veterinary attention if symptoms develop.'
+    },
+    es: {
+      level:'ADVERTENCIA', headline:'FLORACIÓN DAÑINA DE ALGAS',
+      sub:'No nadar. Aléjese de espumas y agua decolorada.',
+      items:[
+        {icon:'🚫🏊',text:'No nadar ni vadear'},
+        {icon:'🚫🐕',text:'No permita que mascotas o animales entren o beban el agua'},
+        {icon:'⚠️🐟',text:'Evite comer peces o mariscos de este cuerpo de agua'},
+        {icon:'🚫💧',text:'No beba, cocine ni lave con esta agua'},
+        {icon:'⚠️',   text:'Hervir o filtrar NO elimina las toxinas'},
+        {icon:'🚿',   text:'Enjuáguese con agua limpia si hay contacto con la piel'},
+      ],
+      footer:'Las personas y animales expuestos pueden enfermarse. Busque atención médica/veterinaria si aparecen síntomas.'
+    }
+  },
+  Caution: {
+    color:'#A16207', bg:'#FFFBEB',
+    en: {
+      level:'CAUTION', headline:'HARMFUL ALGAL BLOOM',
+      sub:'You can swim in this water, but stay away from algae and scum.',
+      items:[
+        {icon:'⚠️🏊',text:'Avoid swimming in or near visible algae or scum'},
+        {icon:'🚫🐕',text:'Do not let pets or animals drink or go into scum areas'},
+        {icon:'⚠️🐟',text:'Avoid eating shellfish from this water body'},
+        {icon:'🚫💧',text:'Do not drink this water'},
+        {icon:'⚠️',   text:'Boiling or filtering does NOT remove toxins'},
+        {icon:'🚿',   text:'Rinse with clean water after any water contact'},
+      ],
+      footer:'A harmful algal bloom has been observed. Conditions may change — check back for updates before water activities.'
+    },
+    es: {
+      level:'PRECAUCIÓN', headline:'FLORACIÓN DAÑINA DE ALGAS',
+      sub:'Puede nadar, pero aléjese de algas y espumas.',
+      items:[
+        {icon:'⚠️🏊',text:'Evite nadar cerca de algas o espumas visibles'},
+        {icon:'🚫🐕',text:'No permita que mascotas beban o entren en zonas con espuma'},
+        {icon:'⚠️🐟',text:'Evite comer mariscos de este cuerpo de agua'},
+        {icon:'🚫💧',text:'No beba esta agua'},
+        {icon:'⚠️',   text:'Hervir o filtrar NO elimina las toxinas'},
+        {icon:'🚿',   text:'Enjuáguese con agua limpia después de cualquier contacto'},
+      ],
+      footer:'Se ha observado una floración dañina. Las condiciones pueden cambiar — consulte antes de actividades acuáticas.'
+    }
+  },
+  Watch: {
+    color:'#1D4ED8', bg:'#EFF6FF',
+    en: {
+      level:'WATCH / AWARENESS', headline:'HARMFUL ALGAL BLOOM OBSERVED',
+      sub:'A bloom has been observed. Stay alert and avoid contact with visible algae.',
+      items:[
+        {icon:'👀',   text:'Watch for and avoid contact with visible scum or discolored water'},
+        {icon:'🚫🐕',text:'Keep pets away from scum or foam areas'},
+        {icon:'⚠️🏊',text:'Avoid swallowing water while swimming'},
+        {icon:'🚿',   text:'Rinse with clean water after water contact'},
+      ],
+      footer:'Monitoring is ongoing. Check back for updates. Report new sightings to mywaterquality.ca.gov'
+    },
+    es: {
+      level:'VIGILANCIA', headline:'FLORACIÓN DE ALGAS OBSERVADA',
+      sub:'Se observó una floración. Esté alerta y evite el contacto con algas visibles.',
+      items:[
+        {icon:'👀',   text:'Observe y evite el contacto con espumas o agua decolorada'},
+        {icon:'🚫🐕',text:'Mantenga mascotas alejadas de zonas con espuma'},
+        {icon:'⚠️🏊',text:'Evite tragar agua al nadar'},
+        {icon:'🚿',   text:'Enjuáguese con agua limpia después del contacto'},
+      ],
+      footer:'El monitoreo está en curso. Consulte para actualizaciones. Reporte avistamientos en mywaterquality.ca.gov'
+    }
+  },
+  Mat: {
+    color:'#7E22CE', bg:'#FAF5FF',
+    en: {
+      level:'ALGAL MAT ALERT', headline:'TOXIC ALGAL MAT',
+      sub:'A toxic benthic algal mat has been detected. Do not touch mat material.',
+      items:[
+        {icon:'🚫✋',text:'Do not touch mat material — it may look like brown/black slime or grass clippings'},
+        {icon:'🚫🐕',text:'Keep pets and animals away — toxins can be fatal rapidly'},
+        {icon:'🚫🐟',text:'Do not eat fish from this water body'},
+        {icon:'🚿',   text:'Wash hands thoroughly after any contact'},
+      ],
+      footer:'Mats can dislodge and float. Even clear water may contain toxins near a mat. Seek veterinary care immediately if a pet contacts mat material.'
+    },
+    es: {
+      level:'ALERTA: TAPETE ALGAL', headline:'TAPETE ALGAL TÓXICO',
+      sub:'Se detectó un tapete algal bentónico tóxico. No toque el material del tapete.',
+      items:[
+        {icon:'🚫✋',text:'No toque el tapete — puede verse como limo café/negro o recortes de pasto'},
+        {icon:'🚫🐕',text:'Mantenga mascotas alejadas — las toxinas pueden ser letales rápidamente'},
+        {icon:'🚫🐟',text:'No coma peces de este cuerpo de agua'},
+        {icon:'🚿',   text:'Lávese las manos concienzudamente después de cualquier contacto'},
+      ],
+      footer:'Los tapetes pueden desprenderse y flotar. Busque atención veterinaria de inmediato si una mascota toca el material.'
+    }
+  },
+  Other: {
+    color:'#374151', bg:'#F9FAFB',
+    en: {
+      level:'INFORMATIONAL', headline:'HARMFUL ALGAL BLOOM MONITORING',
+      sub:'Monitoring is in progress at this location.',
+      items:[
+        {icon:'👀',   text:'Be aware of algae and avoid contact with visible scum'},
+        {icon:'🚫🐕',text:'Keep pets away from scum or discolored water'},
+        {icon:'🚿',   text:'Rinse with clean water after any water contact'},
+      ],
+      footer:'No advisory is currently in effect. Conditions are being monitored. Check mywaterquality.ca.gov for updates.'
+    },
+    es: {
+      level:'INFORMATIVO', headline:'MONITOREO DE ALGAS DAÑINAS',
+      sub:'Se está realizando monitoreo en este lugar.',
+      items:[
+        {icon:'👀',   text:'Esté atento a las algas y evite el contacto con espumas visibles'},
+        {icon:'🚫🐕',text:'Mantenga mascotas alejadas de espumas o agua decolorada'},
+        {icon:'🚿',   text:'Enjuáguese con agua limpia después de cualquier contacto'},
+      ],
+      footer:'Actualmente no hay aviso en vigor. Las condiciones están siendo monitoreadas. Consulte mywaterquality.ca.gov'
+    }
+  }
+};
+
+let signOverlay = null;
+let activeBloom = null;
+
+function printSign(r){
+  r = r || activeBloom;
+  if(!r) return;
+  const s = SIGN[r._adv] || SIGN.Other;
+  const qrUrl = `${location.origin}${location.pathname}?id=${encodeURIComponent(r.id||'')}`;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=4&data=${encodeURIComponent(qrUrl)}`;
+  const obs = r.obs ? r.obs.split('T')[0] : '';
+  const loc = [r.name, r.county ? r.county+' County' : '', r.rwb].filter(Boolean);
+
+  function signHTML(lang){
+    const t = s[lang];
+    return `
+    <div class="ca-sign" style="border:5px solid ${s.color};border-radius:10px;overflow:hidden;font-family:'Helvetica Neue',Arial,sans-serif;max-width:680px;margin:0 auto;background:#fff;">
+      <div style="background:${s.color};color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div>
+          <div style="font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.85;">California State Water Resources Control Board</div>
+          <div style="font-size:1.7rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;line-height:1.1;">${t.level}</div>
+          <div style="font-size:1rem;font-weight:700;margin-top:2px;">${t.headline}</div>
+        </div>
+        <div style="font-size:2.8rem;opacity:.9;">🌊</div>
+      </div>
+      <div style="background:${s.bg};padding:10px 20px;border-bottom:2px solid ${s.color};">
+        <div style="font-size:1rem;font-weight:800;color:${s.color};">${loc[0]||'Water Body'}</div>
+        <div style="font-size:.78rem;color:#555;">${loc.slice(1).join(' · ')}</div>
+      </div>
+      <div style="padding:14px 20px 0;display:flex;gap:16px;">
+        <div style="flex:1;">
+          <div style="font-size:.95rem;font-weight:700;margin-bottom:10px;color:#111;">${t.sub}</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${t.items.map(i=>`<div style="display:flex;align-items:flex-start;gap:8px;font-size:.82rem;line-height:1.4;"><span style="font-size:1rem;flex-shrink:0;">${i.icon}</span><span>${i.text}</span></div>`).join('')}
+          </div>
+          <div style="margin-top:10px;padding:8px 10px;background:${s.bg};border-left:3px solid ${s.color};font-size:.72rem;color:#444;line-height:1.45;">${t.footer}</div>
+          ${obs?`<div style="font-size:.68rem;color:#777;margin-top:6px;">📅 Observed: ${obs}${r.status?' · Status: '+r.status:''}</div>`:''}
+        </div>
+        <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <img src="${qrSrc}" width="120" height="120" alt="QR" style="border:2px solid #ddd;border-radius:6px;"/>
+          <div style="font-size:.6rem;color:#666;text-align:center;line-height:1.4;">Scan for live<br>HAB alerts</div>
+        </div>
+      </div>
+      <div style="margin:10px 20px 0;border-top:1px solid #ddd;padding:8px 0;display:flex;justify-content:space-between;align-items:center;font-size:.62rem;color:#777;">
+        <span>mywaterquality.ca.gov/habs</span>
+        <span>CyanoSafe CA · FHAB Program</span>
+        <span>Report: 1-844-729-6466</span>
+      </div>
+      <div style="padding:8px 20px 14px;display:flex;justify-content:center;">
+        <div style="width:90%;height:3px;background:${s.color};border-radius:2px;opacity:.25;"></div>
+      </div>
+    </div>`;
+  }
+
+  // Remove any existing overlay
+  if(signOverlay) signOverlay.remove();
+
+  signOverlay = document.createElement('div');
+  signOverlay.id = 'sign-overlay';
+  signOverlay.innerHTML = `
+    <div id="sign-backdrop" onclick="closeSign()" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;">
+      <div onclick="event.stopPropagation()" style="width:100%;max-width:720px;">
+        <div class="no-print" style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:10px;">
+          <button onclick="window.print()" style="padding:8px 20px;background:#003368;color:#fff;border:none;border-radius:6px;font-size:.85rem;cursor:pointer;font-weight:700;">🖨️ Print</button>
+          <button onclick="closeSign()" style="padding:8px 16px;background:#fff;color:#333;border:1px solid #ccc;border-radius:6px;font-size:.85rem;cursor:pointer;">✕ Close</button>
+        </div>
+        <div id="sign-content">
+          ${signHTML('en')}
+          <div style="margin:16px 0;border-top:2px dashed #ccc;"></div>
+          ${signHTML('es')}
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(signOverlay);
+}
+
+function closeSign(){
+  if(signOverlay){ signOverlay.remove(); signOverlay=null; }
+}
+
+function showWaterBodyPopup(name){
+  const records = RAW.filter(x => x.name === name)
+    .sort((a,b) => (b.obs||'').localeCompare(a.obs||''));
+  const existing = document.getElementById('wb-popup-overlay');
+  if(existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'wb-popup-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 20px;';
+  overlay.innerHTML = `
+    <div onclick="event.stopPropagation()" style="background:#fff;border-radius:8px;width:100%;max-width:660px;box-shadow:0 8px 32px rgba(0,0,0,.25);overflow:hidden;">
+      <div style="background:var(--ca-blue);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-weight:700;font-size:1rem;">${name}</div>
+          <div style="font-size:.78rem;opacity:.85;">${records.length} report${records.length===1?'':'s'}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="wb-download-btn" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.5);color:#fff;padding:5px 11px;border-radius:5px;cursor:pointer;font-size:.75rem;font-weight:700;">⬇ Download CSV</button>
+          <button onclick="document.getElementById('wb-popup-overlay').remove()" style="background:none;border:none;color:#fff;font-size:1.3rem;cursor:pointer;line-height:1;">✕</button>
+        </div>
+      </div>
+      <div id="wb-mini-map" style="height:200px;width:100%;"></div>
+      <div style="overflow-x:auto;max-height:340px;overflow-y:auto;" id="wb-fhab-table">
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+          <thead style="position:sticky;top:0;z-index:1;">
+            <tr style="background:#f4f6f8;text-align:left;">
+              <th style="padding:9px 14px;border-bottom:2px solid #dde1e7;">Date</th>
+              <th style="padding:9px 14px;border-bottom:2px solid #dde1e7;">Advisory Level</th>
+              <th style="padding:9px 14px;border-bottom:2px solid #dde1e7;">Status</th>
+              <th style="padding:9px 14px;border-bottom:2px solid #dde1e7;">Cyanotoxins</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${records.map((rec,i) => {
+              const m = ADV[rec._adv];
+              const date = rec.obs ? rec.obs.split('T')[0] : '—';
+              const toxinCell = rec.toxin_types
+                ? `<span style="background:#7c3aed;color:#fff;padding:2px 7px;border-radius:4px;font-size:.72rem;font-weight:700;">🧪 ${rec.toxin_types.join(', ')}</span>`
+                : rec.toxin
+                  ? `<span style="background:#7c3aed;color:#fff;padding:2px 7px;border-radius:4px;font-size:.72rem;font-weight:700;">🧪 Detected</span>`
+                  : `<span style="color:#94a3b8;font-size:.78rem;">—</span>`;
+              return `<tr style="background:${i%2?'#fafbfc':'#fff'};">
+                <td style="padding:8px 14px;border-bottom:1px solid #eee;">${date}</td>
+                <td style="padding:8px 14px;border-bottom:1px solid #eee;"><span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${m.color};color:#fff;font-size:.74rem;font-weight:700;">${m.label}</span></td>
+                <td style="padding:8px 14px;border-bottom:1px solid #eee;">${rec.status||'—'}</td>
+                <td style="padding:8px 14px;border-bottom:1px solid #eee;">${toxinCell}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div id="wb-sfei-section"></div>
+    </div>`;
+  overlay.addEventListener('click', () => overlay.remove());
+  document.body.appendChild(overlay);
+
+  // Build mini Leaflet map
+  const miniMap = L.map('wb-mini-map', {zoomControl:true, attributionControl:false, scrollWheelZoom:false})
+  L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
+    opacity:0.5, maxZoom:16
+  }).addTo(miniMap);
+  const latlngs = records.filter(r=>r.lat&&r.lon).map(r=>[r.lat,r.lon]);
+  records.filter(r=>r.lat&&r.lon).forEach(r=>{
+    const m = ADV[r._adv];
+    L.circleMarker([r.lat,r.lon],{radius:6,fillColor:m.color,fillOpacity:0.85,color:'#fff',weight:1.5}).addTo(miniMap);
+  });
+  if(latlngs.length) miniMap.fitBounds(L.latLngBounds(latlngs).pad(0.4));
+
+  // SFEI satellite cyano index
+  const sfeiSection = document.getElementById('wb-sfei-section');
+  const widEntry = WID_MAP[name];
+  if(widEntry){
+    sfeiSection.innerHTML = `<div style="padding:12px 18px;font-size:.78rem;color:#64748b;border-top:1px solid #eee;">🛰 Loading satellite cyano data…</div>`;
+    const wid = widEntry.wid;
+    const today = new Date();
+    const dateTo = today.toISOString().slice(0,10).replace(/-/g,'');
+    const dateFrom = new Date(today.setFullYear(today.getFullYear()-2)).toISOString().slice(0,10).replace(/-/g,'');
+    fetch(`https://fhab-api.sfei.org/cyano/10daymax/${wid}/${dateFrom}/${dateTo}/ci_modified`)
+      .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(data=>{
+        // Filter to rows that have a mean value
+        const rows = data.filter(d=>d.mean!=null);
+        if(!rows.length){ sfeiSection.innerHTML=''; return; }
+
+        // ci_modified thresholds: <50 low, 50-300 moderate, >300 high
+        function ciLevel(v){
+          if(v==null) return {label:'—',color:'#94a3b8'};
+          if(v<50)   return {label:'Low',color:'#1D4ED8'};
+          if(v<300)  return {label:'Moderate',color:'#B45309'};
+          return          {label:'High',color:'#B91C1C'};
+        }
+
+        const vals = rows.map(d=>d.mean);
+        const max = Math.max(...vals), mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+        const latest = rows[rows.length-1];
+        const latestLevel = ciLevel(latest.mean);
+        const maxLevel = ciLevel(max);
+
+        // Sparkline: 60px tall, one bar per reading
+        const W=300, H=48, pad=2;
+        const barW = Math.max(1, Math.floor((W - pad*(rows.length-1)) / rows.length));
+        const scale = v => H - Math.round((v/1000)*H);
+        const bars = rows.map((d,i)=>{
+          const lv = ciLevel(d.mean);
+          const x = i*(barW+pad), barH = Math.max(2, H - scale(d.mean));
+          return `<rect x="${x}" y="${H-barH}" width="${barW}" height="${barH}" fill="${lv.color}" opacity="0.85"><title>${d.date}: ${Math.round(d.mean)}</title></rect>`;
+        }).join('');
+        const sparkline = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;border-radius:3px;background:#f8fafc;">${bars}</svg>`;
+
+        sfeiSection.innerHTML = `
+          <div style="border-top:2px solid #e2e8f0;padding:14px 18px 16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div style="font-weight:700;font-size:.82rem;color:#334155;">🛰 Satellite Cyano Index <span style="font-weight:400;color:#94a3b8;font-size:.74rem;">(SFEI · 10-day composite · past 2 yrs)</span></div>
+            </div>
+            <div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;">
+              <div style="text-align:center;">
+                <div style="font-size:.68rem;color:#64748b;margin-bottom:2px;">Latest reading</div>
+                <span style="background:${latestLevel.color};color:#fff;padding:2px 9px;border-radius:4px;font-size:.75rem;font-weight:700;">${latestLevel.label} (${Math.round(latest.mean)})</span>
+                <div style="font-size:.67rem;color:#94a3b8;margin-top:2px;">${latest.date}</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:.68rem;color:#64748b;margin-bottom:2px;">2-yr peak</div>
+                <span style="background:${maxLevel.color};color:#fff;padding:2px 9px;border-radius:4px;font-size:.75rem;font-weight:700;">${maxLevel.label} (${Math.round(max)})</span>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:.68rem;color:#64748b;margin-bottom:2px;">2-yr mean</div>
+                <span style="background:#475569;color:#fff;padding:2px 9px;border-radius:4px;font-size:.75rem;font-weight:700;">${Math.round(mean)}</span>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:.68rem;color:#64748b;margin-bottom:2px;">Readings</div>
+                <span style="font-size:.82rem;font-weight:700;color:#334155;">${rows.length}</span>
+              </div>
+            </div>
+            <div style="margin-bottom:6px;">${sparkline}</div>
+            <div style="display:flex;justify-content:space-between;font-size:.65rem;color:#94a3b8;">
+              <span>${rows[0].date}</span><span style="font-size:.65rem;color:#94a3b8;">CI scale: 0–1000 · <span style="color:#1D4ED8">■</span>Low &lt;50 · <span style="color:#B45309">■</span>Moderate 50–300 · <span style="color:#B91C1C">■</span>High &gt;300</span><span>${rows[rows.length-1].date}</span>
+            </div>
+          </div>`;
+      })
+      .catch(()=>{ sfeiSection.innerHTML=''; });
+  }
+
+  // Download CSV
+  document.getElementById('wb-download-btn').addEventListener('click', ()=>{
+    const header = ['date','advisory_level','status','lat','lon','county','region','size','texture','detail'];
+    const rows = records.map(r=>[
+      r.obs?r.obs.split('T')[0]:'',
+      ADV[r._adv].label,
+      r.status||'',
+      r.lat,r.lon,
+      r.county||'',r.rwb||'',r.size||'',r.texture||'',r.detail||''
+    ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+    const csv = [header.join(','),...rows].join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download = `${name.replace(/[^a-z0-9]/gi,'_')}_HAB_records.csv`;
+    a.click();
+  });
+}
+
+// ── FILTERS & SIDEBAR ─────────────────────────────────────────────────────────
+function clearDayBtns(){
+  document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('active'));
+}
+function setDays(n, btn){
+  clearDayBtns();
+  btn.classList.add('active');
+  if(n === 0){
+    document.getElementById('fDateFrom').value = '';
+    document.getElementById('fDateTo').value = '';
+  } else {
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - n);
+    document.getElementById('fDateFrom').value = from.toISOString().slice(0,10);
+    document.getElementById('fDateTo').value = to.toISOString().slice(0,10);
+  }
+  applyFilters();
+}
+
+function toggleToxinFilter(btn){
+  toxinOnly = !toxinOnly;
+  btn.style.background = toxinOnly ? '#7c3aed' : 'var(--bg)';
+  btn.style.borderColor = toxinOnly ? '#7c3aed' : 'var(--border)';
+  btn.style.color = toxinOnly ? '#fff' : 'var(--sub)';
+  applyFilters();
+}
+function toggleIllnessFilter(btn){
+  illnessOnly = !illnessOnly;
+  btn.style.background = illnessOnly ? '#b91c1c' : 'var(--bg)';
+  btn.style.borderColor = illnessOnly ? '#b91c1c' : 'var(--border)';
+  btn.style.color = illnessOnly ? '#fff' : 'var(--sub)';
+  applyFilters();
+}
+function toggleToxinType(btn){
+  const type = btn.dataset.type;
+  if(toxinTypeFilter.has(type)){
+    toxinTypeFilter.delete(type);
+    btn.style.background = 'var(--bg)';
+    btn.style.borderColor = 'var(--border)';
+    btn.style.color = 'var(--sub)';
+  } else {
+    toxinTypeFilter.add(type);
+    btn.style.background = '#7c3aed';
+    btn.style.borderColor = '#7c3aed';
+    btn.style.color = '#fff';
+  }
+  applyFilters();
+}
+
+function downloadFiltered(){
+  const header = ['date','water_body','county','region','advisory_level','status','toxin_confirmed','toxin_types','illness_reported','lat','lon','landmark','size','texture','detail'];
+  const rows = filtered.map(r => [
+    r.obs ? r.obs.split('T')[0] : '',
+    r.name||'', r.county||'', r.rwb||'',
+    ADV[r._adv].label, r.status||'',
+    r.toxin ? 'Yes' : 'No',
+    r.toxin_types ? r.toxin_types.join('; ') : '',
+    r.illness ? 'Yes' : 'No',
+    r.lat, r.lon,
+    r.landmark||'', r.size||'', r.texture||'', r.detail||''
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = [header.join(','), ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = `CyanoSafe_filtered_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function applyFilters(){
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const status = document.getElementById('fStatus').value;
+  const county = document.getElementById('fCounty').value;
+  const rwb = document.getElementById('fRWB').value;
+  const dateFrom = document.getElementById('fDateFrom').value;
+  const dateTo   = document.getElementById('fDateTo').value;
+  filtered = RAW.filter(r => {
+    if(advFilter.size && !advFilter.has(r._adv)) return false;
+    if(status && r.status !== status) return false;
+    if(county && r.county !== county) return false;
+    if(rwb && r.rwb !== rwb) return false;
+    if(q && !((r.name||'')+' '+(r.county||'')+' '+(r.landmark||'')+' '+(r.rwb||'')).toLowerCase().includes(q)) return false;
+    const obs = r.obs ? r.obs.slice(0,10) : null;
+    if(dateFrom && (!obs || obs < dateFrom)) return false;
+    if(dateTo   && (!obs || obs > dateTo))   return false;
+    if(toxinOnly && !r.toxin) return false;
+    if(toxinTypeFilter.size && !(r.toxin_types && r.toxin_types.some(t => toxinTypeFilter.has(t)))) return false;
+    if(illnessOnly && !r.illness) return false;
+    return true;
+  });
+  draw();
+  renderList(filtered);
+  renderStats(filtered);
+}
+
+function renderList(data){
+  const list = document.getElementById('bloomList');
+  const cnt = document.getElementById('listCount');
+  cnt.textContent = '('+data.length.toLocaleString()+')';
+  if(!data.length){
+    list.innerHTML=`<div class="no-results">${lang==='en'?'No blooms match filters.':'Sin resultados.'}</div>`;
+    return;
+  }
+  const show = data.slice(0,60);
+  list.innerHTML = show.map(r => {
+    const m = ADV[r._adv];
+    const obs = r.obs ? r.obs.split('T')[0] : '';
+    return `<div class="bloom-card adv-${r._adv}" onclick="flyTo(${r.lat},${r.lon})">
+      <div class="bloom-name">${r.name||'Unknown'}</div>
+      <div class="bloom-meta">${r.county||''}${obs?' · '+obs:''}</div>
+      <span class="bloom-badge" style="background:${m.color}">${lang==='en'?m.label:m.label_es}</span>
+      ${r.toxins?'<span class="bloom-badge" style="background:#455a64;margin-left:3px">🧪</span>':''}
+    </div>`;
+  }).join('');
+  if(data.length>60) list.innerHTML+=`<div class="no-results">…and ${(data.length-60).toLocaleString()} more. Filter to narrow.</div>`;
+}
+
+function renderStats(data){
+  const bar = document.getElementById('statsBar');
+  const warning = data.filter(r=>r.adv&&r.adv.includes('Warning')).length;
+  const caution = data.filter(r=>r.adv&&r.adv.includes('Caution')).length;
+  const danger = data.filter(r=>r._adv==='Danger').length;
+  bar.innerHTML=`
+    <div class="stat-card"><div class="stat-num">${data.length.toLocaleString()}</div><div class="stat-lbl">${lang==='en'?'Reports':'Reportes'}</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--danger)">${danger}</div><div class="stat-lbl">${lang==='en'?'Danger':'Peligro'}</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--warning)">${warning}</div><div class="stat-lbl">${lang==='en'?'Warning':'Advertencia'}</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--caution)">${caution}</div><div class="stat-lbl">${lang==='en'?'Caution':'Precaución'}</div></div>
+  `;
+}
+
+function flyTo(lat, lon){
+  view.cx = lon; view.cy = lat; view.scale = Math.max(view.scale, 6);
+  draw();
+}
+
+// ── LEGEND ────────────────────────────────────────────────────────────────────
+function buildLegend(){
+  const counts = {};
+  RAW.forEach(r => counts[r._adv]=(counts[r._adv]||0)+1);
+  document.getElementById('legend').innerHTML = Object.entries(ADV)
+    .sort((a,b)=>a[1].order-b[1].order)
+    .map(([k,m])=>`<div class="leg-row" data-key="${k}" onclick="toggleAdv('${k}',this)">
+      <span class="leg-dot" style="background:${m.color}"></span>
+      <span class="leg-lbl">${m.label}</span>
+      <span class="leg-count">${(counts[k]||0).toLocaleString()}</span>
+    </div>`).join('');
+}
+
+function toggleAdv(key, el){
+  if(advFilter.has(key)) advFilter.delete(key); else advFilter.add(key);
+  document.querySelectorAll('.leg-row').forEach(r=>{
+    r.classList.toggle('dimmed', advFilter.size>0 && !advFilter.has(r.dataset.key));
+  });
+  applyFilters();
+}
+
+// ── POPULATE DROPDOWNS ─────────────────────────────────────────────────────────
+function populateSelects(){
+  const counties=[...new Set(RAW.map(r=>r.county).filter(Boolean))].sort();
+  const rwbs=[...new Set(RAW.map(r=>r.rwb).filter(Boolean))].sort();
+  document.getElementById('fCounty').innerHTML='<option value="">All counties</option>'+counties.map(c=>`<option>${c}</option>`).join('');
+  document.getElementById('fRWB').innerHTML='<option value="">All regions</option>'+rwbs.map(r=>`<option>${r}</option>`).join('');
+}
+
+// ── LANGUAGE ──────────────────────────────────────────────────────────────────
+const LABELS = {
+  en:{'lbl-search':'Search','lbl-adv':'Advisory Level','lbl-status':'Status','lbl-county':'County','lbl-rwb':'Regional Water Board'},
+  es:{'lbl-search':'Buscar','lbl-adv':'Nivel de Aviso','lbl-status':'Estado','lbl-county':'Condado','lbl-rwb':'Junta Regional'},
+};
+function setLang(l, btn){
+  lang=l;
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  Object.entries(LABELS[l]).forEach(([id,txt])=>{
+    const el=document.getElementById(id); if(el) el.textContent=txt;
+  });
+  document.getElementById('search').placeholder=l==='en'?'Water body, location or county…':'Cuerpo de agua o condado…';
+  // Update legend labels
+  document.querySelectorAll('.leg-lbl').forEach(el=>{
+    const key=el.closest('.leg-row')?.dataset.key;
+    if(key) el.textContent=ADV[key][l==='en'?'label':'label_es'];
+  });
+  renderList(filtered);
+  renderStats(filtered);
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+let WID_MAP = {};
+fetch("wid_map.json").then(r=>r.json()).then(d=>{ WID_MAP=d; }).catch(()=>{});
+
+buildLegend();
+populateSelects();
+fetch("blooms.json")
+  .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+  .then(data=>{
+    RAW=data;
+    RAW.forEach(r=>r._adv=classifyAdv(r.adv));
+    filtered=[...RAW];
+    buildLegend();
+    populateSelects();
+    applyFilters();
+    // Handle ?waterbody= deep-link (all records for a water body)
+    const urlWB = new URLSearchParams(location.search).get('waterbody');
+    if(urlWB){
+      document.getElementById('search').value = urlWB;
+      applyFilters();
+      const first = filtered.find(r => r.name === urlWB);
+      if(first) flyTo(first.lat, first.lon);
+    }
+    // Handle ?id= deep-link from QR code
+    const urlId = new URLSearchParams(location.search).get('id');
+    if(urlId){
+      const target = RAW.find(r => String(r.id) === String(urlId));
+      if(target){
+        activeBloom = target;
+        pinnedTip = true;
+        const vw = window.innerWidth, vh = window.innerHeight;
+        showTooltip(target, vw * 0.6, vh * 0.4, true);
+        flyTo(target.lat, target.lon);
+      }
+    }
+  })
+  .catch(err=>{
+    document.getElementById('bloomList').innerHTML=`<div class="no-results" style="color:red">Failed to load data: ${err.message}</div>`;
+    console.error('blooms.json load error:', err);
+  });
+new ResizeObserver(resize).observe(document.getElementById('map-wrap'));
+
+// QR code for bloom reporting page
+(function(){
+  const el = document.getElementById('report-qr');
+  if(!el || typeof QRCode === 'undefined') return;
+  new QRCode(el, {
+    text: 'https://www.waterboards.ca.gov/water_issues/programs/swamp/freshwater_cyanobacteria.html',
+    width: 120, height: 120,
+    colorDark: '#003368', colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+})();
+</script>
+</body>
+</html>

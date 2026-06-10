@@ -1,0 +1,458 @@
+{
+  "Antelope Lake": {
+    "sfei_name": "Antelope Lake",
+    "wid": 3
+  },
+  "Big Bear Lake": {
+    "sfei_name": "Big Bear Lake",
+    "wid": 7
+  },
+  "Big Bear lake": {
+    "sfei_name": "Big Bear Lake",
+    "wid": 7
+  },
+  "Big Lagoon": {
+    "sfei_name": "Big Lagoon",
+    "wid": 9
+  },
+  "Big Sage Reservoir": {
+    "sfei_name": "Big Sage Reservoir",
+    "wid": 11
+  },
+  "Big bear lake": {
+    "sfei_name": "Big Bear Lake",
+    "wid": 7
+  },
+  "Boca Reservoir": {
+    "sfei_name": "Boca Reservoir",
+    "wid": 13
+  },
+  "Bodega Bay": {
+    "sfei_name": "Bodega Bay",
+    "wid": 311
+  },
+  "Bridgeport Reservoir": {
+    "sfei_name": "Bridgeport Reservoir",
+    "wid": 17
+  },
+  "Bucks Lake": {
+    "sfei_name": "Bucks Lake",
+    "wid": 20
+  },
+  "Cachuma Lake": {
+    "sfei_name": "Lake Cachuma",
+    "wid": 108
+  },
+  "Calaveras Reservoir": {
+    "sfei_name": "Calaveras Reservoir",
+    "wid": 23
+  },
+  "Carquinez Strait": {
+    "sfei_name": "Carquinez Strait",
+    "wid": 28
+  },
+  "Castaic Lake": {
+    "sfei_name": "Castaic Lake",
+    "wid": 30
+  },
+  "Clear Lake": {
+    "sfei_name": "Clear Lake",
+    "wid": 33
+  },
+  "Clear lake": {
+    "sfei_name": "Clear Lake",
+    "wid": 33
+  },
+  "Clifton Court Forebay": {
+    "sfei_name": "Clifton Court Forebay",
+    "wid": 35
+  },
+  "Copco Reservoir": {
+    "sfei_name": "Copco Reservoir",
+    "wid": 38
+  },
+  "Crowley Lake": {
+    "sfei_name": "Lake Crowley",
+    "wid": 111
+  },
+  "Diamond Valley Lake": {
+    "sfei_name": "Diamond Valley Lake",
+    "wid": 44
+  },
+  "Diamond valley lake": {
+    "sfei_name": "Diamond Valley Lake",
+    "wid": 44
+  },
+  "Donner Lake": {
+    "sfei_name": "Donner Lake",
+    "wid": 49
+  },
+  "Eagle Lake": {
+    "sfei_name": "Eagle Lake",
+    "wid": 51
+  },
+  "East Park Reservoir": {
+    "sfei_name": "East Park Reservoir",
+    "wid": 52
+  },
+  "Englebright Lake": {
+    "sfei_name": "Englebright Lake",
+    "wid": 57
+  },
+  "Folsom Lake": {
+    "sfei_name": "Folsom Lake",
+    "wid": 62
+  },
+  "Frenchman Lake": {
+    "sfei_name": "Frenchman Lake",
+    "wid": 67
+  },
+  "Freshwater Lagoon": {
+    "sfei_name": "Freshwater Lagoon",
+    "wid": 265
+  },
+  "Grant Lake": {
+    "sfei_name": "Grant Lake",
+    "wid": 71
+  },
+  "Havasu Lake": {
+    "sfei_name": "Lake Havasu",
+    "wid": 73
+  },
+  "Hensley Lake": {
+    "sfei_name": "Hensley Lake",
+    "wid": 76
+  },
+  "Humboldt Bay": {
+    "sfei_name": "Humboldt Bay",
+    "wid": 271
+  },
+  "Ice house reservoir": {
+    "sfei_name": "Ice House Reservoir",
+    "wid": 86
+  },
+  "Iron Gate Reservoir": {
+    "sfei_name": "Iron Gate Reservoir",
+    "wid": 90
+  },
+  "June Lake": {
+    "sfei_name": "June Lake",
+    "wid": 273
+  },
+  "Kaweah Lake": {
+    "sfei_name": "Lake Kaweah",
+    "wid": 120
+  },
+  "Klamath River Estuary": {
+    "sfei_name": "Klamath River Estuary",
+    "wid": 98
+  },
+  "Lake Almanor": {
+    "sfei_name": "Lake Almanor",
+    "wid": 101
+  },
+  "Lake Arrowhead": {
+    "sfei_name": "Lake Arrowhead",
+    "wid": 105
+  },
+  "Lake Berryessa": {
+    "sfei_name": "Lake Berryessa",
+    "wid": 106
+  },
+  "Lake Britton": {
+    "sfei_name": "Lake Britton",
+    "wid": 107
+  },
+  "Lake Cachuma": {
+    "sfei_name": "Lake Cachuma",
+    "wid": 108
+  },
+  "Lake Crowley": {
+    "sfei_name": "Lake Crowley",
+    "wid": 111
+  },
+  "Lake Davis": {
+    "sfei_name": "Lake Davis",
+    "wid": 113
+  },
+  "Lake Del Valle": {
+    "sfei_name": "Lake del Valle",
+    "wid": 114
+  },
+  "Lake Elsinore": {
+    "sfei_name": "Lake Elsinore",
+    "wid": 116
+  },
+  "Lake Havasu": {
+    "sfei_name": "Lake Havasu",
+    "wid": 73
+  },
+  "Lake Hemet": {
+    "sfei_name": "Lake Hemet",
+    "wid": 117
+  },
+  "Lake Hennessey": {
+    "sfei_name": "Lake Hennessey",
+    "wid": 118
+  },
+  "Lake Henshaw": {
+    "sfei_name": "Lake Henshaw",
+    "wid": 119
+  },
+  "Lake Hodges": {
+    "sfei_name": "Lake Hodges",
+    "wid": 275
+  },
+  "Lake Isabella": {
+    "sfei_name": "Isabella Lake",
+    "wid": 93
+  },
+  "Lake McClure": {
+    "sfei_name": "Lake McClure",
+    "wid": 124
+  },
+  "Lake Mendocino": {
+    "sfei_name": "Lake Mendocino",
+    "wid": 126
+  },
+  "Lake Nacimiento": {
+    "sfei_name": "Lake Nacimiento",
+    "wid": 171
+  },
+  "Lake Oroville": {
+    "sfei_name": "Lake Oroville",
+    "wid": 128
+  },
+  "Lake Pillsbury": {
+    "sfei_name": "Lake Pillsbury",
+    "wid": 129
+  },
+  "Lake Piru": {
+    "sfei_name": "Lake Piru",
+    "wid": 130
+  },
+  "Lake San Antonio": {
+    "sfei_name": "Lake San Antonio",
+    "wid": 131
+  },
+  "Lake Shastina": {
+    "sfei_name": "Lake Shastina",
+    "wid": 133
+  },
+  "Lake Siskiyou": {
+    "sfei_name": "Lake Siskiyou",
+    "wid": 134
+  },
+  "Lake Sonoma": {
+    "sfei_name": "Lake Sonoma",
+    "wid": 135
+  },
+  "Lake Tahoe": {
+    "sfei_name": "Lake Tahoe",
+    "wid": 139
+  },
+  "Lake Webb": {
+    "sfei_name": "Lake Webb",
+    "wid": 143
+  },
+  "Lake del Valle": {
+    "sfei_name": "Lake del Valle",
+    "wid": 114
+  },
+  "Lake tahoe": {
+    "sfei_name": "Lake Tahoe",
+    "wid": 139
+  },
+  "Lewiston Lake": {
+    "sfei_name": "Lewiston Lake",
+    "wid": 145
+  },
+  "Lopez Lake": {
+    "sfei_name": "Lopez Lake",
+    "wid": 149
+  },
+  "Los Vaqueros Reservoir": {
+    "sfei_name": "Los Vaqueros Reservoir",
+    "wid": 151
+  },
+  "Los Vaqueros reservoir": {
+    "sfei_name": "Los Vaqueros Reservoir",
+    "wid": 151
+  },
+  "Millerton Lake": {
+    "sfei_name": "Millerton Lake",
+    "wid": 163
+  },
+  "Mission Bay": {
+    "sfei_name": "Mission Bay",
+    "wid": 280
+  },
+  "Mono Lake": {
+    "sfei_name": "Mono Lake",
+    "wid": 165
+  },
+  "Morena Reservoir": {
+    "sfei_name": "Morena Reservoir",
+    "wid": 167
+  },
+  "Mountain Meadows Reservoir": {
+    "sfei_name": "Mountain Meadows Reservoir",
+    "wid": 169
+  },
+  "Mountain meadows reservoir": {
+    "sfei_name": "Mountain Meadows Reservoir",
+    "wid": 169
+  },
+  "New Bullards Bar Reservoir": {
+    "sfei_name": "New Bullards Bar Reservoir",
+    "wid": 173
+  },
+  "Nicasio Reservoir": {
+    "sfei_name": "Nicasio Reservoir",
+    "wid": 177
+  },
+  "Prosser Creek": {
+    "sfei_name": "Prosser Creek Reservoir",
+    "wid": 185
+  },
+  "Prosser Creek Reservoir": {
+    "sfei_name": "Prosser Creek Reservoir",
+    "wid": 185
+  },
+  "Pyramid Lake": {
+    "sfei_name": "Pyramid Lake",
+    "wid": 186
+  },
+  "Pyramid lake": {
+    "sfei_name": "Pyramid Lake",
+    "wid": 186
+  },
+  "Quarry Lakes": {
+    "sfei_name": "Quarry Lakes",
+    "wid": 285
+  },
+  "Redinger Lake": {
+    "sfei_name": "Redinger Lake",
+    "wid": 190
+  },
+  "Richardson Bay": {
+    "sfei_name": "Richardson Bay",
+    "wid": 192
+  },
+  "Ruth Lake": {
+    "sfei_name": "Ruth Lake",
+    "wid": 196
+  },
+  "Salt Spring Valley Reservoir": {
+    "sfei_name": "Salt Spring Valley Reservoir",
+    "wid": 199
+  },
+  "Salton Sea": {
+    "sfei_name": "Salton Sea",
+    "wid": 201
+  },
+  "San Antonio Lake": {
+    "sfei_name": "Lake San Antonio",
+    "wid": 131
+  },
+  "San Luis Reservoir": {
+    "sfei_name": "San Luis Reservoir",
+    "wid": 206
+  },
+  "San Pablo Bay": {
+    "sfei_name": "San Pablo Bay",
+    "wid": 207
+  },
+  "San Vicente Reservoir": {
+    "sfei_name": "San Vicente Reservoir",
+    "wid": 209
+  },
+  "Santa Margarita Lake": {
+    "sfei_name": "Santa Margarita Lake",
+    "wid": 294
+  },
+  "Shasta Lake": {
+    "sfei_name": "Shasta Lake",
+    "wid": 132
+  },
+  "Silver Lake": {
+    "sfei_name": "Silver Lake",
+    "wid": 215
+  },
+  "Silverwood Lake": {
+    "sfei_name": "Silverwood Lake",
+    "wid": 216
+  },
+  "Stampede Reservoir": {
+    "sfei_name": "Stampede Reservoir",
+    "wid": 225
+  },
+  "Stone Lagoon": {
+    "sfei_name": "Stone Lagoon",
+    "wid": 226
+  },
+  "Stony Gorge Reservoir": {
+    "sfei_name": "Stony Gorge Reservoir",
+    "wid": 227
+  },
+  "Thermalito Afterbay": {
+    "sfei_name": "Thermalito Afterbay",
+    "wid": 231
+  },
+  "Thermalito Forebay": {
+    "sfei_name": "Thermalito Forebay",
+    "wid": 232
+  },
+  "Thermalito forebay": {
+    "sfei_name": "Thermalito Forebay",
+    "wid": 232
+  },
+  "Tinemaha Reservoir": {
+    "sfei_name": "Tinemaha Reservoir",
+    "wid": 235
+  },
+  "Tomales Bay": {
+    "sfei_name": "Tomales Bay",
+    "wid": 297
+  },
+  "Topaz Lake": {
+    "sfei_name": "Topaz Lake",
+    "wid": 236
+  },
+  "Trinity Lake": {
+    "sfei_name": "Trinity Lake",
+    "wid": 237
+  },
+  "Tule Lake": {
+    "sfei_name": "Tule Lake",
+    "wid": 238
+  },
+  "Vail Lake": {
+    "sfei_name": "Vail Lake",
+    "wid": 248
+  },
+  "Whale Rock Reservoir": {
+    "sfei_name": "Whale Rock Reservoir",
+    "wid": 251
+  },
+  "Whiskeytown Lake": {
+    "sfei_name": "Whiskeytown Lake",
+    "wid": 252
+  },
+  "lake Tahoe": {
+    "sfei_name": "Lake Tahoe",
+    "wid": 139
+  },
+  "lake webb": {
+    "sfei_name": "Lake Webb",
+    "wid": 143
+  },
+  "mission bay": {
+    "sfei_name": "Mission Bay",
+    "wid": 280
+  },
+  "salt spring valley reservoir": {
+    "sfei_name": "Salt Spring Valley Reservoir",
+    "wid": 199
+  }
+}
