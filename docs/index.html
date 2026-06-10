@@ -114,6 +114,58 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
 #tooltip .qr-wrap canvas{border-radius:4px;}
 #tooltip .qr-label{font-size:.64rem;color:var(--sub);line-height:1.4;}
 #tooltip .qr-label strong{display:block;color:var(--text);font-size:.7rem;}
+
+/* ── MOBILE FAB (hidden on desktop) ─────────────────────────────────────────── */
+#sidebar-fab{display:none;position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  z-index:150;background:var(--ca-blue);color:#fff;border:none;border-radius:24px;
+  padding:10px 20px;font-size:.85rem;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);white-space:nowrap;align-items:center;gap:7px;}
+.sidebar-handle{display:none;width:36px;height:4px;background:#cbd5e1;
+  border-radius:2px;margin:10px auto 2px;flex-shrink:0;}
+
+/* ── MOBILE LAYOUT ───────────────────────────────────────────────────────────── */
+@media(max-width:768px){
+  .app-body{position:relative;}
+  #map-wrap{width:100%;}
+  .sidebar{
+    position:absolute;bottom:0;left:0;right:0;width:100%;
+    height:72vh;border-right:none;
+    border-top:1px solid var(--border);
+    border-radius:14px 14px 0 0;
+    transform:translateY(100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    z-index:200;box-shadow:0 -4px 24px rgba(0,0,0,.2);
+  }
+  .sidebar.mobile-open{transform:translateY(0);}
+  .sidebar-handle{display:block;}
+  #sidebar-fab{display:flex;}
+
+  /* Tooltip as bottom sheet */
+  #tooltip{
+    position:fixed!important;
+    bottom:0!important;left:0!important;right:0!important;top:auto!important;
+    max-width:100%!important;width:100%!important;
+    border-radius:14px 14px 0 0;
+    max-height:78vh;overflow-y:auto;
+    border:none;border-top:1px solid var(--border);
+    box-shadow:0 -4px 24px rgba(0,0,0,.25);
+    padding:14px 16px 28px;
+  }
+
+  /* Bigger tap targets */
+  .lang-btn{padding:7px 14px;font-size:.82rem;}
+  .day-btn{padding:10px 0;font-size:.8rem;}
+  .search-box,.filter,select.filter{padding:10px 10px;font-size:1rem;margin-bottom:9px;}
+  .bloom-card{padding:12px 14px;}
+  .bloom-name{font-size:.92rem;}
+  .bloom-meta{font-size:.78rem;}
+  .stat-num{font-size:1.5rem;}
+  .leg-row{padding:6px 5px;}
+  .leg-dot{width:14px;height:14px;}
+  .sb-label{font-size:.72rem;margin:14px 0 5px;}
+  #tooltip h3{font-size:1rem;}
+  #tooltip{font-size:.84rem;}
+}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -134,7 +186,8 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
   </div>
 </header>
 <div class="app-body">
-  <div class="sidebar">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-handle" id="sidebar-handle"></div>
     <div class="sb-scroll">
       <div class="sb-label" id="lbl-search">Search</div>
       <input class="search-box" id="search" type="search" placeholder="Water body, location or county…" oninput="applyFilters()"/>
@@ -213,6 +266,7 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
   <div id="map-wrap">
     <div id="map-canvas" style="position:absolute;inset:0;"></div>
     <div id="tooltip"></div>
+    <button id="sidebar-fab" onclick="toggleSidebar()">☰ Bloom List</button>
   </div>
 </div>
 <script>
@@ -348,6 +402,9 @@ function showTooltip(r, cx, cy, pinned){
     ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#b91c1c;color:#fff;font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:4px;">🤒 Illness reported</span>`
     : '';
   tip.innerHTML = `
+    <div style="display:none;" id="tip-close-handle" class="mobile-close-handle">
+      <div style="width:36px;height:4px;background:#cbd5e1;border-radius:2px;margin:0 auto 10px;"></div>
+    </div>
     <h3>${r.name||'Unknown water body'}</h3>
     <a href="#" id="wb-summary-link" style="pointer-events:auto;display:inline-block;font-size:.72rem;color:var(--ca-blue);text-decoration:none;margin-bottom:4px;">📋 ${wbCount} record${wbCount===1?'':'s'} for this water body</a>
     <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:4px;">
@@ -366,10 +423,14 @@ function showTooltip(r, cx, cy, pinned){
   tip.style.pointerEvents = pinned ? 'auto' : 'none';
   const wbLink = document.getElementById('wb-summary-link');
   if(wbLink) wbLink.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); showWaterBodyPopup(r.name); });
-  const tw = 290, th = 220;
-  const vw = window.innerWidth, vh = window.innerHeight;
-  tip.style.left = (cx + tw + 12 > vw ? cx - tw - 8 : cx + 12) + 'px';
-  tip.style.top  = (cy + th + 12 > vh ? cy - th    : cy + 12) + 'px';
+  const handle = document.getElementById('tip-close-handle');
+  if(handle) handle.style.display = window.innerWidth <= 768 ? 'block' : 'none';
+  if(window.innerWidth > 768){
+    const tw = 290, th = 220;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    tip.style.left = (cx + tw + 12 > vw ? cx - tw - 8 : cx + 12) + 'px';
+    tip.style.top  = (cy + th + 12 > vh ? cy - th    : cy + 12) + 'px';
+  }
 }
 document.addEventListener('click', e => {
   if(!tip.contains(e.target)) { pinnedTip = false; tip.style.display='none'; }
@@ -908,9 +969,22 @@ function renderStats(data){
   `;
 }
 
+function toggleSidebar(){
+  const sb = document.getElementById('sidebar');
+  const fab = document.getElementById('sidebar-fab');
+  const open = sb.classList.toggle('mobile-open');
+  fab.textContent = open ? '✕ Close' : '☰ Bloom List';
+}
+
+// Close sidebar when a bloom card is tapped on mobile
 function flyTo(lat, lon){
-  view.cx = lon; view.cy = lat; view.scale = Math.max(view.scale, 6);
-  draw();
+  map.setView([lat, lon], Math.max(map.getZoom(), 11));
+  if(window.innerWidth <= 768){
+    const sb = document.getElementById('sidebar');
+    const fab = document.getElementById('sidebar-fab');
+    sb.classList.remove('mobile-open');
+    fab.textContent = '☰ Bloom List';
+  }
 }
 
 // ── LEGEND ────────────────────────────────────────────────────────────────────
