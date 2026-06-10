@@ -116,10 +116,14 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
 #tooltip .qr-label strong{display:block;color:var(--text);font-size:.7rem;}
 
 /* ── MOBILE FAB (hidden on desktop) ─────────────────────────────────────────── */
-#sidebar-fab{display:none;position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
-  z-index:150;background:var(--ca-blue);color:#fff;border:none;border-radius:24px;
-  padding:10px 20px;font-size:.85rem;font-weight:700;cursor:pointer;
-  box-shadow:0 4px 16px rgba(0,0,0,.3);white-space:nowrap;align-items:center;gap:7px;}
+.map-fabs{display:none;position:absolute;bottom:16px;left:0;right:0;
+  justify-content:center;gap:10px;z-index:150;pointer-events:none;}
+.map-fabs button{pointer-events:auto;background:var(--ca-blue);color:#fff;border:none;
+  border-radius:24px;padding:10px 18px;font-size:.85rem;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);white-space:nowrap;display:flex;align-items:center;gap:6px;}
+.map-fabs button:disabled{opacity:.6;cursor:default;}
+#locate-btn.locating{background:#475569;}
+#locate-btn.located{background:#2563EB;}
 .sidebar-handle{display:none;width:36px;height:4px;background:#cbd5e1;
   border-radius:2px;margin:10px auto 2px;flex-shrink:0;}
 
@@ -138,7 +142,7 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
   }
   .sidebar.mobile-open{transform:translateY(0);}
   .sidebar-handle{display:block;}
-  #sidebar-fab{display:flex;}
+  .map-fabs{display:flex;}
 
   /* Tooltip as bottom sheet */
   #tooltip{
@@ -270,7 +274,10 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
   <div id="map-wrap">
     <div id="map-canvas" style="position:absolute;inset:0;"></div>
     <div id="tooltip"></div>
-    <button id="sidebar-fab" onclick="toggleSidebar()">☰ Bloom List</button>
+    <div class="map-fabs">
+      <button id="sidebar-fab" onclick="toggleSidebar()">☰ Bloom List</button>
+      <button id="locate-btn" onclick="locateMe()">📍 Near Me</button>
+    </div>
   </div>
 </div>
 <script>
@@ -946,15 +953,24 @@ function renderList(data){
     list.innerHTML=`<div class="no-results">${lang==='en'?'No blooms match filters.':'Sin resultados.'}</div>`;
     return;
   }
-  const show = data.slice(0,60);
+  // Sort by distance from user if location is known
+  let sorted = [...data];
+  if(userLat !== null){
+    sorted.sort((a,b) => distKm(userLat,userLon,a.lat,a.lon) - distKm(userLat,userLon,b.lat,b.lon));
+  }
+  const show = sorted.slice(0,60);
   list.innerHTML = show.map(r => {
     const m = ADV[r._adv];
     const obs = r.obs ? r.obs.split('T')[0] : '';
+    const distBadge = userLat !== null
+      ? `<span class="bloom-badge" style="background:#475569;margin-left:3px">${fmtDist(distKm(userLat,userLon,r.lat,r.lon))}</span>`
+      : '';
     return `<div class="bloom-card adv-${r._adv}" onclick="flyTo(${r.lat},${r.lon})">
       <div class="bloom-name">${r.name||'Unknown'}</div>
       <div class="bloom-meta">${r.county||''}${obs?' · '+obs:''}</div>
       <span class="bloom-badge" style="background:${m.color}">${lang==='en'?m.label:m.label_es}</span>
       ${r.toxins?'<span class="bloom-badge" style="background:#455a64;margin-left:3px">🧪</span>':''}
+      ${distBadge}
     </div>`;
   }).join('');
   if(data.length>60) list.innerHTML+=`<div class="no-results">…and ${(data.length-60).toLocaleString()} more. Filter to narrow.</div>`;
@@ -980,15 +996,81 @@ function toggleSidebar(){
   fab.textContent = open ? '✕ Close' : '☰ Bloom List';
 }
 
+function closeSidebar(){
+  const sb = document.getElementById('sidebar');
+  const fab = document.getElementById('sidebar-fab');
+  sb.classList.remove('mobile-open');
+  fab.textContent = '☰ Bloom List';
+}
+
 // Close sidebar when a bloom card is tapped on mobile
 function flyTo(lat, lon){
   map.setView([lat, lon], Math.max(map.getZoom(), 11));
-  if(window.innerWidth <= 768){
-    const sb = document.getElementById('sidebar');
-    const fab = document.getElementById('sidebar-fab');
-    sb.classList.remove('mobile-open');
-    fab.textContent = '☰ Bloom List';
-  }
+  if(window.innerWidth <= 768) closeSidebar();
+}
+
+// ── GEOLOCATION ───────────────────────────────────────────────────────────────
+let userLat = null, userLon = null, userMarker = null;
+
+function distKm(lat1, lon1, lat2, lon2){
+  const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function fmtDist(km){
+  const mi = km * 0.621371;
+  return mi < 10 ? mi.toFixed(1)+' mi' : Math.round(mi)+' mi';
+}
+
+function locateMe(){
+  if(!navigator.geolocation){ alert('Geolocation not supported by your browser.'); return; }
+  const btn = document.getElementById('locate-btn');
+  btn.textContent = '⏳ Locating…';
+  btn.disabled = true;
+  btn.className = 'locating';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      userLat = pos.coords.latitude;
+      userLon = pos.coords.longitude;
+
+      // You-are-here marker
+      if(userMarker) userMarker.remove();
+      const icon = L.divIcon({
+        className: '',
+        html: '<div style="width:16px;height:16px;background:#2563EB;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 3px rgba(37,99,235,.35);"></div>',
+        iconSize: [16,16], iconAnchor: [8,8]
+      });
+      userMarker = L.marker([userLat, userLon], {icon, zIndexOffset: 1000})
+        .bindTooltip('You are here', {permanent:false, direction:'top', offset:[0,-10]})
+        .addTo(map);
+
+      map.setView([userLat, userLon], 11);
+
+      btn.textContent = '📍 Near Me';
+      btn.disabled = false;
+      btn.className = 'located';
+
+      // Re-render list sorted by proximity
+      renderList(filtered);
+
+      // Open sidebar to show nearby results
+      if(window.innerWidth <= 768){
+        const sb = document.getElementById('sidebar');
+        const fab = document.getElementById('sidebar-fab');
+        sb.classList.add('mobile-open');
+        fab.textContent = '✕ Close';
+      }
+    },
+    err => {
+      btn.textContent = '📍 Near Me';
+      btn.disabled = false;
+      btn.className = '';
+      const msg = err.code === 1 ? 'Location permission denied.' : 'Could not get your location.';
+      alert(msg);
+    },
+    { enableHighAccuracy: true, timeout: 12000 }
+  );
 }
 
 // ── LEGEND ────────────────────────────────────────────────────────────────────
