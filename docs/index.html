@@ -117,10 +117,12 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
 
 /* ── MOBILE FAB (hidden on desktop) ─────────────────────────────────────────── */
 .map-fabs{display:none;position:absolute;bottom:16px;left:0;right:0;
-  justify-content:center;gap:10px;z-index:150;pointer-events:none;}
-.map-fabs button{pointer-events:auto;background:var(--ca-blue);color:#fff;border:none;
+  justify-content:center;gap:10px;z-index:1000;pointer-events:none;}
+.map-fabs button{pointer-events:auto;touch-action:manipulation;
+  background:var(--ca-blue);color:#fff;border:none;
   border-radius:24px;padding:10px 18px;font-size:.85rem;font-weight:700;cursor:pointer;
-  box-shadow:0 4px 16px rgba(0,0,0,.3);white-space:nowrap;display:flex;align-items:center;gap:6px;}
+  box-shadow:0 4px 16px rgba(0,0,0,.3);white-space:nowrap;display:flex;align-items:center;gap:6px;
+  -webkit-tap-highlight-color:transparent;}
 .map-fabs button:disabled{opacity:.6;cursor:default;}
 #locate-btn.locating{background:#475569;}
 #locate-btn.located{background:#2563EB;}
