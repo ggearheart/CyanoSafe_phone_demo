@@ -421,14 +421,10 @@ function showTooltip(r, cx, cy, pinned){
     [lang==='en'?'Status':'Estado', r.status||'—'],
     r.size ? [lang==='en'?'Size':'Tamaño', r.size] : null,
     r.texture ? [lang==='en'?'Texture':'Textura', r.texture] : null,
-    r.toxin_types ? ['Toxin Types', r.toxin_types.join(', ')] : null,
   ].filter(Boolean);
 
   const qrUrl = `${location.origin}${location.pathname}?id=${encodeURIComponent(r.id||'')}`;
   const wbCount = RAW.filter(x => x.name === r.name).length;
-  const toxinBadge = r.toxin
-    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#7c3aed;color:#fff;font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:4px;">🧪 Cyanotoxins detected</span>`
-    : '';
   const illnessBadge = r.illness
     ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#b91c1c;color:#fff;font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:4px;">🤒 Illness reported</span>`
     : '';
@@ -439,7 +435,7 @@ function showTooltip(r, cx, cy, pinned){
     <h3>${r.name||'Unknown water body'}</h3>
     <a href="#" id="wb-summary-link" style="pointer-events:auto;display:inline-block;font-size:.72rem;color:var(--ca-blue);text-decoration:none;margin-bottom:4px;">📋 ${wbCount} record${wbCount===1?'':'s'} for this water body</a>
     <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:4px;">
-      <span class="t-badge" style="background:${m.color};margin:0;">${lang==='en'?m.label:m.label_es}</span>${toxinBadge}${illnessBadge}
+      <span class="t-badge" style="background:${m.color};margin:0;">${lang==='en'?m.label:m.label_es}</span>${illnessBadge}
     </div>
     <table>${rows.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
     <div class="guidance g-${r._adv}"><strong>${g.hdr}</strong>${g.body}</div>
@@ -741,23 +737,16 @@ function showWaterBodyPopup(name){
               <th style="padding:9px 14px;border-bottom:2px solid #dde1e7;">Date</th>
               <th style="padding:9px 14px;border-bottom:2px solid #dde1e7;">Advisory Level</th>
               <th style="padding:9px 14px;border-bottom:2px solid #dde1e7;">Status</th>
-              <th style="padding:9px 14px;border-bottom:2px solid #dde1e7;">Cyanotoxins</th>
             </tr>
           </thead>
           <tbody>
             ${records.map((rec,i) => {
               const m = ADV[rec._adv];
               const date = rec.obs ? rec.obs.split('T')[0] : '—';
-              const toxinCell = rec.toxin_types
-                ? `<span style="background:#7c3aed;color:#fff;padding:2px 7px;border-radius:4px;font-size:.72rem;font-weight:700;">🧪 ${rec.toxin_types.join(', ')}</span>`
-                : rec.toxin
-                  ? `<span style="background:#7c3aed;color:#fff;padding:2px 7px;border-radius:4px;font-size:.72rem;font-weight:700;">🧪 Detected</span>`
-                  : `<span style="color:#94a3b8;font-size:.78rem;">—</span>`;
               return `<tr style="background:${i%2?'#fafbfc':'#fff'};">
                 <td style="padding:8px 14px;border-bottom:1px solid #eee;">${date}</td>
                 <td style="padding:8px 14px;border-bottom:1px solid #eee;"><span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${m.color};color:#fff;font-size:.74rem;font-weight:700;">${m.label}</span></td>
                 <td style="padding:8px 14px;border-bottom:1px solid #eee;">${rec.status||'—'}</td>
-                <td style="padding:8px 14px;border-bottom:1px solid #eee;">${toxinCell}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -918,13 +907,11 @@ function setDays(n, btn){
 }
 
 function downloadFiltered(){
-  const header = ['date','water_body','county','region','advisory_level','status','toxin_confirmed','toxin_types','illness_reported','lat','lon','landmark','size','texture','detail'];
+  const header = ['date','water_body','county','region','advisory_level','status','illness_reported','lat','lon','landmark','size','texture','detail'];
   const rows = filtered.map(r => [
     r.obs ? r.obs.split('T')[0] : '',
     r.name||'', r.county||'', r.rwb||'',
     ADV[r._adv].label, r.status||'',
-    r.toxin ? 'Yes' : 'No',
-    r.toxin_types ? r.toxin_types.join('; ') : '',
     r.illness ? 'Yes' : 'No',
     r.lat, r.lon,
     r.landmark||'', r.size||'', r.texture||'', r.detail||''
@@ -984,7 +971,6 @@ function renderList(data){
       <div class="bloom-name">${r.name||'Unknown'}</div>
       <div class="bloom-meta">${r.county||''}${obs?' · '+obs:''}</div>
       <span class="bloom-badge" style="background:${m.color}">${lang==='en'?m.label:m.label_es}</span>
-      ${r.toxins?'<span class="bloom-badge" style="background:#455a64;margin-left:3px">🧪</span>':''}
       ${distBadge}
     </div>`;
   }).join('');
