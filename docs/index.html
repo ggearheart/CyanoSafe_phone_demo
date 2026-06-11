@@ -438,10 +438,10 @@ function showTooltip(r, cx, cy, pinned){
 
   const qrUrl = `${location.origin}${location.pathname}?id=${encodeURIComponent(r.id||'')}`;
   const wbCount = RAW.filter(x => x.name === r.name).length;
-  const toxinBadge = r.toxin === 'True'
-    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#7c3aed;color:#fff;font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:4px;">🧪 Cyanotoxins detected${r.toxin_types ? ': ' + r.toxin_types.join(', ') : ''}</span>`
+  const toxinBadge = r.toxin
+    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#7c3aed;color:#fff;font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:4px;">🧪 Cyanotoxins detected</span>`
     : '';
-  const illnessBadge = r.illness === 'True'
+  const illnessBadge = r.illness
     ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#b91c1c;color:#fff;font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:4px;">🤒 Illness reported</span>`
     : '';
   tip.innerHTML = `
@@ -760,10 +760,10 @@ function showWaterBodyPopup(name){
             ${records.map((rec,i) => {
               const m = ADV[rec._adv];
               const date = rec.obs ? rec.obs.split('T')[0] : '—';
-              const toxinCell = rec.toxin === 'True' && rec.toxin_types
+              const toxinCell = rec.toxin_types
                 ? `<span style="background:#7c3aed;color:#fff;padding:2px 7px;border-radius:4px;font-size:.72rem;font-weight:700;">🧪 ${rec.toxin_types.join(', ')}</span>`
-                : rec.toxin === 'True'
-                  ? `<span style="background:#7c3aed;color:#fff;padding:2px 7px;border-radius:4px;font-size:.72rem;font-weight:700;">🧪 Confirmed</span>`
+                : rec.toxin
+                  ? `<span style="background:#7c3aed;color:#fff;padding:2px 7px;border-radius:4px;font-size:.72rem;font-weight:700;">🧪 Detected</span>`
                   : `<span style="color:#94a3b8;font-size:.78rem;">—</span>`;
               return `<tr style="background:${i%2?'#fafbfc':'#fff'};">
                 <td style="padding:8px 14px;border-bottom:1px solid #eee;">${date}</td>
@@ -963,9 +963,9 @@ function downloadFiltered(){
     r.obs ? r.obs.split('T')[0] : '',
     r.name||'', r.county||'', r.rwb||'',
     ADV[r._adv].label, r.status||'',
-    r.toxin === 'True' ? 'Yes' : 'No',
+    r.toxin ? 'Yes' : 'No',
     r.toxin_types ? r.toxin_types.join('; ') : '',
-    r.illness === 'True' ? 'Yes' : 'No',
+    r.illness ? 'Yes' : 'No',
     r.lat, r.lon,
     r.landmark||'', r.size||'', r.texture||'', r.detail||''
   ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
@@ -992,9 +992,9 @@ function applyFilters(){
     const obs = r.obs ? r.obs.slice(0,10) : null;
     if(dateFrom && (!obs || obs < dateFrom)) return false;
     if(dateTo   && (!obs || obs > dateTo))   return false;
-    if(toxinOnly && r.toxin !== 'True') return false;
-    if(toxinTypeFilter.size && !(r.toxin === 'True' && r.toxin_types && r.toxin_types.some(t => toxinTypeFilter.has(t)))) return false;
-    if(illnessOnly && r.illness !== 'True') return false;
+    if(toxinOnly && !r.toxin) return false;
+    if(toxinTypeFilter.size && !(r.toxin_types && r.toxin_types.some(t => toxinTypeFilter.has(t)))) return false;
+    if(illnessOnly && !r.illness) return false;
     return true;
   });
   draw();
@@ -1026,7 +1026,7 @@ function renderList(data){
       <div class="bloom-name">${r.name||'Unknown'}</div>
       <div class="bloom-meta">${r.county||''}${obs?' · '+obs:''}</div>
       <span class="bloom-badge" style="background:${m.color}">${lang==='en'?m.label:m.label_es}</span>
-      ${r.toxin==='True'?'<span class="bloom-badge" style="background:#455a64;margin-left:3px">🧪</span>':''}
+      ${r.toxins?'<span class="bloom-badge" style="background:#455a64;margin-left:3px">🧪</span>':''}
       ${distBadge}
     </div>`;
   }).join('');
