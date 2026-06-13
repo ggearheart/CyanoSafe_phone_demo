@@ -222,6 +222,7 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
   <div id="map-backdrop" onclick="closeSidebar()"></div>
   <div class="sidebar" id="sidebar">
     <div class="sidebar-handle" id="sidebar-handle"></div>
+    <div id="dataUpdatedBar" style="font-size:.72rem;font-weight:600;color:#fff;background:var(--ca-blue);text-align:center;padding:5px 10px;letter-spacing:.01em;"></div>
     <div class="sb-scroll">
       <div class="sb-label" id="lbl-search">Search</div>
       <input class="search-box" id="search" type="search" placeholder="Water body, location or county…" oninput="applyFilters()"/>
@@ -257,7 +258,6 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
       </div>
 
       <div class="stats-bar" id="statsBar"></div>
-      <div id="dataUpdatedBar" style="font-size:.68rem;color:#94a3b8;text-align:right;margin:-4px 0 8px;"></div>
       <button id="downloadBtn" onclick="downloadFiltered()" style="width:100%;margin-bottom:7px;padding:6px 0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--sub);">⬇ Download Filtered CSV</button>
       <!-- Report a Bloom section -->
       <details id="report-bloom-details" style="margin-bottom:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);overflow:hidden;">
