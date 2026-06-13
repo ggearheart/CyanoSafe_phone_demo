@@ -257,6 +257,7 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
       </div>
 
       <div class="stats-bar" id="statsBar"></div>
+      <div id="dataUpdatedBar" style="font-size:.68rem;color:#94a3b8;text-align:right;margin:-4px 0 8px;"></div>
       <button id="downloadBtn" onclick="downloadFiltered()" style="width:100%;margin-bottom:7px;padding:6px 0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--sub);">⬇ Download Filtered CSV</button>
       <!-- Report a Bloom section -->
       <details id="report-bloom-details" style="margin-bottom:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);overflow:hidden;">
@@ -1222,6 +1223,15 @@ populateSelects();
 // ── LIVE DATA FETCH from CA Open Data CKAN API ─────────────────────────────
 const CKAN_RESOURCE = 'c6a36b91-ad38-4611-8750-87ee99e497dd';
 const CKAN_API = `https://data.ca.gov/api/3/action/datastore_search?resource_id=${CKAN_RESOURCE}&limit=5000`;
+const CKAN_META = `https://data.ca.gov/api/3/action/resource_show?id=${CKAN_RESOURCE}`;
+
+fetch(CKAN_META).then(r=>r.json()).then(d=>{
+  const ts = d?.result?.last_modified;
+  if(!ts) return;
+  const dt = new Date(ts);
+  const label = dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  document.getElementById('dataUpdatedBar').textContent = `Data updated ${label} · CA Open Data`;
+}).catch(()=>{});
 
 function clean(v){ const s=String(v??'').trim(); return(s===''||s==='None'||s==='null')?null:s; }
 
