@@ -1218,8 +1218,46 @@ fetch("wid_map.json").then(r=>r.json()).then(d=>{ WID_MAP=d; }).catch(()=>{});
 
 buildLegend();
 populateSelects();
-fetch("blooms.json")
-  .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+
+// ── LIVE DATA FETCH from CA Open Data CKAN API ─────────────────────────────
+const CKAN_RESOURCE = 'c6a36b91-ad38-4611-8750-87ee99e497dd';
+const CKAN_API = `https://data.ca.gov/api/3/action/datastore_search?resource_id=${CKAN_RESOURCE}&limit=5000`;
+
+function clean(v){ const s=String(v??'').trim(); return(s===''||s==='None'||s==='null')?null:s; }
+
+async function loadLiveData(){
+  document.getElementById('bloomList').innerHTML='<div class="no-results">Loading live data…</div>';
+  const res=await fetch(CKAN_API);
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const json=await res.json();
+  return json.result.records.flatMap(row=>{
+    const lat=parseFloat(row['Bloom_Latitude']);
+    const lon=parseFloat(row['Bloom_Longitude']||row['Bloom Longitude']);
+    if(isNaN(lat)||isNaN(lon)) return [];
+    const detail=(row['Advisory_Detail_Description']||'')+(row['AdvisoryDetail']||'');
+    return [{
+      id:    clean(row['Bloom_Report_ID']),
+      cid:   clean(row['Case_ID']),
+      name:  clean(row['Water_Body_Name'])||clean(row['Official_Water_Body_Name']),
+      county:clean(row['County']),
+      rwb:   clean(row['Regional_Water_Board']),
+      lat, lon,
+      obs:   clean(row['Observation_Date']),
+      status:clean(row['Case_Status']),
+      adv:   clean(row['Reported_Advisory_Types']),
+      detail:clean(row['Advisory_Detail_Description'])||clean(row['AdvisoryDetail']),
+      size:  clean(row['Bloom_Size']),
+      texture:clean(row['Bloom_Texture']),
+      location:clean(row['Bloom_Location']),
+      landmark:clean(row['Landmark']),
+      wtype: clean(row['Water_Body_Type']),
+      wuse:  clean(row['Water_Body_Use']),
+      illness: detail.toLowerCase().includes('illness')||detail.toLowerCase().includes('sick'),
+    }];
+  });
+}
+
+loadLiveData()
   .then(data=>{
     RAW=data;
     RAW.forEach(r=>r._adv=classifyAdv(r.adv));
@@ -1227,7 +1265,7 @@ fetch("blooms.json")
     buildLegend();
     populateSelects();
     applyFilters();
-    // Handle ?waterbody= deep-link (all records for a water body)
+    // Handle ?waterbody= deep-link
     const urlWB = new URLSearchParams(location.search).get('waterbody');
     if(urlWB){
       document.getElementById('search').value = urlWB;
@@ -1250,7 +1288,7 @@ fetch("blooms.json")
   })
   .catch(err=>{
     document.getElementById('bloomList').innerHTML=`<div class="no-results" style="color:red">Failed to load data: ${err.message}</div>`;
-    console.error('blooms.json load error:', err);
+    console.error('Live data load error:', err);
   });
 new ResizeObserver(resize).observe(document.getElementById('map-wrap'));
 
