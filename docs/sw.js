@@ -1,4 +1,4 @@
-const CACHE = 'cyanosafe-v1';
+const CACHE = 'cyanosafe-v2';
 const SHELL = [
   '/CyanoSafe_phone_demo/',
   '/CyanoSafe_phone_demo/index.html',
@@ -32,7 +32,7 @@ self.addEventListener('activate', e => {
 // - everything else: cache-first
 self.addEventListener('fetch', e => {
   const url = e.request.url;
-  if (url.includes('blooms.json') || url.includes('wid_map.json')) {
+  if (url.includes('blooms.json') || url.includes('wid_map.json') || url.includes('index.html') || url.endsWith('/CyanoSafe_phone_demo/')) {
     e.respondWith(
       fetch(e.request)
         .then(res => {
