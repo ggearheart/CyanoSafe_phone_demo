@@ -260,6 +260,8 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
       <div class="sb-label">Toxins</div>
       <button id="toxinSuspectedBtn" onclick="toggleToxinSuspected(this)" style="width:100%;margin-bottom:5px;padding:6px 0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--sub);touch-action:manipulation;">⚗️ Toxins Suspected or Confirmed</button>
       <button id="labVerifiedBtn" onclick="toggleLabVerified(this)" style="width:100%;margin-bottom:7px;padding:6px 0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--sub);touch-action:manipulation;">🔬 Lab-Verified Toxins Only</button>
+      <div class="sb-label">Water Use</div>
+      <button id="drinkingWaterBtn" onclick="toggleDrinkingWater(this)" style="width:100%;margin-bottom:7px;padding:6px 0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--sub);touch-action:manipulation;">🚰 Drinking Water Source</button>
       <div class="stats-bar" id="statsBar"></div>
       <button id="downloadBtn" onclick="downloadFiltered()" style="width:100%;margin-bottom:7px;padding:6px 0;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:.75rem;font-weight:600;color:var(--sub);">⬇ Download Filtered CSV</button>
       <!-- Report a Bloom section -->
@@ -354,6 +356,7 @@ let filtered = [];
 let advFilter = new Set();
 let labVerifiedOnly = false;
 let toxinSuspectedOnly = false;
+let drinkingWaterOnly = false;
 const TOXIN_RE = /toxin|cyanotox|microcystin|anatoxin|cylindrosperm|saxitoxin|toxic\s+bloom|toxic\s+algae|algae\s+toxic|bloom\s+toxic|potential\s+toxic|possible\s+toxic/i;
 
 // Classify all records once
@@ -903,6 +906,14 @@ function showWaterBodyPopup(name){
 function clearDayBtns(){
   document.querySelectorAll('.day-btn').forEach(b=>b.classList.remove('active'));
 }
+function toggleDrinkingWater(btn){
+  drinkingWaterOnly = !drinkingWaterOnly;
+  btn.style.background  = drinkingWaterOnly ? '#0369a1' : 'var(--bg)';
+  btn.style.borderColor = drinkingWaterOnly ? '#0369a1' : 'var(--border)';
+  btn.style.color       = drinkingWaterOnly ? '#fff'    : 'var(--sub)';
+  applyFilters();
+}
+
 function toggleToxinSuspected(btn){
   toxinSuspectedOnly = !toxinSuspectedOnly;
   btn.style.background  = toxinSuspectedOnly ? '#7c3aed' : 'var(--bg)';
@@ -968,6 +979,7 @@ function applyFilters(){
     const obs = r.obs ? r.obs.slice(0,10) : null;
     if(dateFrom && (!obs || obs < dateFrom)) return false;
     if(dateTo   && (!obs || obs > dateTo))   return false;
+    if(drinkingWaterOnly && !r.drinking_water) return false;
     if(toxinSuspectedOnly && !r.toxin_suspected) return false;
     if(labVerifiedOnly && !r.lab_verified) return false;
     return true;
@@ -1312,6 +1324,7 @@ async function loadLiveData(){
       wtype: clean(row['Water_Body_Type']),
       wuse:  clean(row['Water_Body_Use']),
       illness: detail.toLowerCase().includes('illness')||detail.toLowerCase().includes('sick'),
+      drinking_water: (row['Drinking_Water_Source']||'').trim().toLowerCase()==='yes',
       toxin_suspected: TOXIN_RE.test(detail),
       lab_verified: labLinked || labToxins.length > 0,
       lab_toxins:   labToxins,
