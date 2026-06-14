@@ -273,12 +273,24 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
           <p style="margin:0 0 8px;font-size:.72rem;color:var(--sub);line-height:1.5;">
             Observed a bloom? Report it to the <strong>CA State Water Board FHAB Program</strong> — reports help protect public health.
           </p>
-          <ol style="margin:0 0 10px;padding-left:18px;font-size:.72rem;color:var(--sub);line-height:1.8;">
-            <li>Go to the CA Water Boards FHAB page</li>
-            <li>Click <strong>"Submit a Bloom Report"</strong></li>
-            <li>Fill in location, date, and photos</li>
-            <li>Submit — staff will follow up</li>
-          </ol>
+
+          <!-- Quick-report: camera + location pre-fill -->
+          <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+            <div style="font-size:.72rem;font-weight:700;color:#0369a1;margin-bottom:6px;">📸 Quick Report</div>
+            <div style="font-size:.68rem;color:#475569;margin-bottom:8px;">Take a photo and open the report form with your GPS location pre-filled.</div>
+            <label style="display:block;text-align:center;padding:8px;background:#0369a1;color:#fff;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;margin-bottom:6px;touch-action:manipulation;">
+              📷 Take / Choose Photo
+              <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handleReportPhoto(this)"/>
+            </label>
+            <div id="report-photo-preview" style="display:none;text-align:center;margin-bottom:6px;">
+              <img id="report-photo-img" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid #bae6fd;" alt="Selected photo"/>
+              <div style="font-size:.65rem;color:#64748b;margin-top:3px;" id="report-photo-name"></div>
+            </div>
+            <button id="report-submit-btn" onclick="openReportForm()" style="display:none;width:100%;padding:7px;background:var(--ca-blue);color:#fff;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;touch-action:manipulation;">
+              Open Report Form with My Location ↗
+            </button>
+          </div>
+
           <a href="https://www.waterboards.ca.gov/water_issues/programs/swamp/freshwater_cyanobacteria.html"
              target="_blank" rel="noopener"
              style="display:block;text-align:center;padding:7px;background:var(--ca-blue);color:#fff;border-radius:var(--radius);font-size:.75rem;font-weight:700;text-decoration:none;margin-bottom:10px;">
@@ -297,6 +309,7 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
   <div id="map-wrap">
     <div id="map-canvas" style="position:absolute;inset:0;"></div>
     <div id="tooltip"></div>
+    <div id="swim-hero" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:700;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.22);padding:10px 16px;min-width:220px;max-width:88vw;text-align:center;pointer-events:none;"></div>
   </div>
   <div class="map-fabs">
     <button id="sidebar-fab" onclick="toggleSidebar()">☰ Bloom List</button>
@@ -359,8 +372,7 @@ let toxinSuspectedOnly = false;
 let drinkingWaterOnly = false;
 const TOXIN_RE = /toxin|cyanotox|microcystin|anatoxin|cylindrosperm|saxitoxin|toxic\s+bloom|toxic\s+algae|algae\s+toxic|bloom\s+toxic|potential\s+toxic|possible\s+toxic/i;
 
-// Classify all records once
-RAW.forEach(r => r._adv = classifyAdv(r.adv));
+
 
 // ── MAP ENGINE (Leaflet) ───────────────────────────────────────────────────────
 const map = L.map('map-canvas', {zoomControl: false}).setView([37.5, -119.5], 6);
@@ -818,7 +830,9 @@ function showWaterBodyPopup(name){
     const wid = widEntry.wid;
     const today = new Date();
     const dateTo = today.toISOString().slice(0,10).replace(/-/g,'');
-    const dateFrom = new Date(today.setFullYear(today.getFullYear()-2)).toISOString().slice(0,10).replace(/-/g,'');
+    const twoYearsAgo = new Date(today);
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear()-2);
+    const dateFrom = twoYearsAgo.toISOString().slice(0,10).replace(/-/g,'');
     fetch(`https://fhab-api.sfei.org/cyano/10daymax/${wid}/${dateFrom}/${dateTo}/ci_modified`)
       .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
       .then(data=>{
@@ -1009,11 +1023,14 @@ function renderList(data){
     const distBadge = userLat !== null
       ? `<span class="bloom-badge" style="background:#475569;margin-left:3px">${fmtDist(distKm(userLat,userLon,r.lat,r.lon))}</span>`
       : '';
+    const trendBadge = r._trend
+      ? `<span class="bloom-badge" style="background:${r._trend==='↑'?'#b91c1c':r._trend==='↓'?'#16a34a':'#64748b'};margin-left:3px" title="${r._trend==='↑'?'Advisory worsened':r._trend==='↓'?'Advisory improved':'No change'}">${r._trend}</span>`
+      : '';
     return `<div class="bloom-card adv-${r._adv}" onclick="flyTo(${r.lat},${r.lon})">
       <div class="bloom-name">${r.name||'Unknown'}</div>
       <div class="bloom-meta">${r.county||''}${obs?' · '+obs:''}</div>
       <span class="bloom-badge" style="background:${m.color}">${lang==='en'?m.label:m.label_es}</span>
-      ${distBadge}
+      ${trendBadge}${distBadge}
     </div>`;
   }).join('');
   if(data.length>60) list.innerHTML+=`<div class="no-results">…and ${(data.length-60).toLocaleString()} more. Filter to narrow.</div>`;
@@ -1021,9 +1038,9 @@ function renderList(data){
 
 function renderStats(data){
   const bar = document.getElementById('statsBar');
-  const warning = data.filter(r=>r.adv&&r.adv.includes('Warning')).length;
-  const caution = data.filter(r=>r.adv&&r.adv.includes('Caution')).length;
-  const danger = data.filter(r=>r._adv==='Danger').length;
+  const warning = data.filter(r=>r._adv==='Warning').length;
+  const caution = data.filter(r=>r._adv==='Caution').length;
+  const danger  = data.filter(r=>r._adv==='Danger').length;
   bar.innerHTML=`
     <div class="stat-card"><div class="stat-num">${data.length.toLocaleString()}</div><div class="stat-lbl">${lang==='en'?'Reports':'Reportes'}</div></div>
     <div class="stat-card"><div class="stat-num" style="color:var(--danger)">${danger}</div><div class="stat-lbl">${lang==='en'?'Danger':'Peligro'}</div></div>
@@ -1100,6 +1117,7 @@ function locateMe(){
 
       // Re-render list sorted by proximity
       renderList(filtered);
+      updateSwimHero();
 
       // Open sidebar to show nearby results
       if(window.innerWidth <= 768){
@@ -1118,6 +1136,104 @@ function locateMe(){
     },
     { enableHighAccuracy: true, timeout: 12000 }
   );
+}
+
+// ── BLOOM REPORT (camera + location pre-fill) ─────────────────────────────────
+let _reportPhotoFile = null;
+let _reportLat = null, _reportLon = null;
+
+function handleReportPhoto(input){
+  const file = input.files[0];
+  if(!file) return;
+  _reportPhotoFile = file;
+  const preview = document.getElementById('report-photo-preview');
+  const img     = document.getElementById('report-photo-img');
+  const name    = document.getElementById('report-photo-name');
+  const btn     = document.getElementById('report-submit-btn');
+  img.src = URL.createObjectURL(file);
+  name.textContent = file.name;
+  preview.style.display = 'block';
+  btn.style.display = 'block';
+  btn.textContent = 'Getting your location…';
+  btn.disabled = true;
+  // Grab GPS now so it's ready when user taps submit
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        _reportLat = pos.coords.latitude.toFixed(6);
+        _reportLon = pos.coords.longitude.toFixed(6);
+        btn.textContent = 'Open Report Form with My Location ↗';
+        btn.disabled = false;
+      },
+      () => {
+        _reportLat = null; _reportLon = null;
+        btn.textContent = 'Open Report Form ↗';
+        btn.disabled = false;
+      },
+      {enableHighAccuracy:true, timeout:10000}
+    );
+  } else {
+    btn.textContent = 'Open Report Form ↗';
+    btn.disabled = false;
+  }
+}
+
+function openReportForm(){
+  const base = 'https://www.waterboards.ca.gov/water_issues/programs/swamp/freshwater_cyanobacteria.html';
+  let url = base;
+  if(_reportLat && _reportLon){
+    url += `?lat=${_reportLat}&lon=${_reportLon}`;
+  }
+  window.open(url, '_blank', 'noopener');
+}
+
+// ── TREND COMPUTATION ─────────────────────────────────────────────────────────
+const ADV_ORDER = {Danger:0,Warning:1,Caution:2,Watch:3,Mat:4,Other:5};
+function computeTrends(){
+  // Group by water body name, sort each group by obs date
+  const byName = {};
+  for(const r of RAW){
+    if(!r.name) continue;
+    (byName[r.name] = byName[r.name]||[]).push(r);
+  }
+  for(const records of Object.values(byName)){
+    records.sort((a,b)=>(a.obs||'').localeCompare(b.obs||''));
+    for(let i=0;i<records.length;i++){
+      if(i===0){ records[i]._trend=null; continue; }
+      const prev = ADV_ORDER[records[i-1]._adv]??9;
+      const curr = ADV_ORDER[records[i]._adv]??9;
+      records[i]._trend = curr < prev ? '↑' : curr > prev ? '↓' : '=';
+    }
+  }
+}
+
+// ── SAFE TO SWIM HERO ─────────────────────────────────────────────────────────
+function updateSwimHero(){
+  const hero = document.getElementById('swim-hero');
+  if(!hero || userLat === null || !RAW.length) return;
+  // Find nearest bloom with an active advisory
+  let nearest = null, nearestDist = Infinity;
+  for(const r of RAW){
+    if(!r.lat||!r.lon) continue;
+    const d = distKm(userLat, userLon, r.lat, r.lon);
+    if(d < nearestDist){ nearestDist = d; nearest = r; }
+  }
+  // Find worst advisory within 25 miles
+  const nearby = RAW.filter(r=>r.lat&&r.lon&&distKm(userLat,userLon,r.lat,r.lon)<=40.2)
+    .sort((a,b)=>(ADV_ORDER[a._adv]??9)-(ADV_ORDER[b._adv]??9));
+  const worst = nearby[0];
+  if(!worst){ hero.style.display='none'; return; }
+  const m = ADV[worst._adv];
+  const dist = fmtDist(distKm(userLat, userLon, worst.lat, worst.lon));
+  const safe = worst._adv === 'Other';
+  hero.style.display = 'block';
+  hero.innerHTML = `
+    <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Nearest Advisory</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span style="display:inline-block;padding:3px 10px;border-radius:6px;background:${m.color};color:#fff;font-size:.8rem;font-weight:800;">${m.label}</span>
+      <span style="font-size:.78rem;font-weight:600;color:#334155;">${worst.name}</span>
+    </div>
+    <div style="font-size:.68rem;color:#64748b;margin-top:3px;">${dist} away</div>`;
 }
 
 // ── LEGEND ────────────────────────────────────────────────────────────────────
@@ -1263,7 +1379,7 @@ fetch("wid_map.json").then(r=>r.json()).then(d=>{ WID_MAP=d; }).catch(()=>{});
 buildLegend();
 populateSelects();
 
-// ── LIVE DATA FETCH from CA Open Data CKAN API ─────────────────────────────
+// ── DATA LOADING — pre-built blooms.json first, live CKAN fallback ───────────
 const CKAN_RESOURCE = 'c6a36b91-ad38-4611-8750-87ee99e497dd';
 const CKAN_RESULTS  = '9d4e1df4-0cd6-4165-9e63-effcafd9dccc';
 const CKAN_API      = `https://data.ca.gov/api/3/action/datastore_search?resource_id=${CKAN_RESOURCE}&limit=5000`;
@@ -1280,9 +1396,45 @@ fetch(CKAN_META).then(r=>r.json()).then(d=>{
 
 function clean(v){ const s=String(v??'').trim(); return(s===''||s==='None'||s==='null')?null:s; }
 
-async function loadLiveData(){
-  document.getElementById('bloomList').innerHTML='<div class="no-results">Loading live data…</div>';
+// Try pre-built blooms.json (fast). Fall back to live CKAN fetch if missing/stale.
+async function loadData(){
+  document.getElementById('bloomList').innerHTML='<div class="no-results">Loading data…</div>';
+  const prebuilt = await fetch('blooms.json').catch(()=>null);
+  if(prebuilt){
+    const fromCache = prebuilt.headers.get('X-From-Cache') === 'true';
+    if(prebuilt.ok || fromCache){
+      const data = await prebuilt.json();
+      if(fromCache) showOfflineBanner();
+      return data;
+    }
+  }
+  // Fallback: live CKAN fetch
+  return loadLiveData();
+}
 
+function showOfflineBanner(){
+  const bar = document.getElementById('dataUpdatedBar');
+  if(!bar) return;
+  // Ask SW for the timestamp of the cached data
+  if('serviceWorker' in navigator && navigator.serviceWorker.controller){
+    navigator.serviceWorker.controller.postMessage('get-cached-at');
+    navigator.serviceWorker.addEventListener('message', e => {
+      if(e.data?.type !== 'cached-at') return;
+      const ts = e.data.ts;
+      const ago = ts ? Math.round((Date.now()-ts)/60000) : null;
+      const label = ago !== null
+        ? (ago < 60 ? `${ago}m ago` : `${Math.round(ago/60)}h ago`)
+        : 'recently';
+      bar.style.background = '#b45309';
+      bar.textContent = `📴 Offline — showing data cached ${label}`;
+    }, {once:true});
+  } else {
+    bar.style.background = '#b45309';
+    bar.textContent = '📴 Offline — showing cached data';
+  }
+}
+
+async function loadLiveData(){
   // Fetch bloom reports and lab results in parallel
   const [bloomRes, labRes] = await Promise.all([fetch(CKAN_API), fetch(CKAN_API_RES)]);
   if(!bloomRes.ok) throw new Error('HTTP '+bloomRes.status);
@@ -1332,10 +1484,11 @@ async function loadLiveData(){
   });
 }
 
-loadLiveData()
+loadData()
   .then(data=>{
     RAW=data;
     RAW.forEach(r=>r._adv=classifyAdv(r.adv));
+    computeTrends();
     filtered=[...RAW];
     buildLegend();
     populateSelects();
@@ -1362,8 +1515,14 @@ loadLiveData()
     }
   })
   .catch(err=>{
-    document.getElementById('bloomList').innerHTML=`<div class="no-results" style="color:red">Failed to load data: ${err.message}</div>`;
     console.error('Live data load error:', err);
+    document.getElementById('bloomList').innerHTML=`
+      <div class="no-results" style="padding:20px 12px;text-align:center;">
+        <div style="font-size:1.6rem;margin-bottom:8px;">⚠️</div>
+        <div style="font-weight:700;color:#b91c1c;margin-bottom:4px;">Could not load bloom data</div>
+        <div style="font-size:.75rem;color:#64748b;margin-bottom:14px;">${err.message}</div>
+        <button onclick="location.reload()" style="padding:8px 20px;background:var(--ca-blue);color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:.8rem;">↺ Retry</button>
+      </div>`;
   });
 new ResizeObserver(resize).observe(document.getElementById('map-wrap'));
 

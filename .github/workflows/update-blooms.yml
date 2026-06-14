@@ -1,0 +1,113 @@
+name: Update blooms.json nightly
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # 8 AM UTC = midnight PT
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch and build blooms.json
+        run: |
+          python3 - <<'EOF'
+          import json, urllib.request
+
+          BLOOM_RES  = 'c6a36b91-ad38-4611-8750-87ee99e497dd'
+          LAB_RES    = '9d4e1df4-0cd6-4165-9e63-effcafd9dccc'
+          BASE       = 'https://data.ca.gov/api/3/action/datastore_search'
+          import re
+          TOXIN_RE = re.compile(
+              r'toxin|cyanotox|microcystin|anatoxin|cylindrosperm|saxitoxin'
+              r'|toxic\s+bloom|toxic\s+algae|algae\s+toxic|bloom\s+toxic'
+              r'|potential\s+toxic|possible\s+toxic', re.I)
+
+          def fetch(resource, limit=5000):
+              url = f'{BASE}?resource_id={resource}&limit={limit}'
+              with urllib.request.urlopen(url, timeout=60) as r:
+                  return json.load(r)['result']['records']
+
+          def clean(v):
+              s = str(v or '').strip()
+              return None if s in ('', 'None', 'null') else s
+
+          print('Fetching bloom reports...')
+          bloom_rows = fetch(BLOOM_RES)
+          print(f'  {len(bloom_rows)} rows')
+
+          print('Fetching lab results...')
+          lab_rows = fetch(LAB_RES)
+          print(f'  {len(lab_rows)} rows')
+
+          # Build lab lookup: Bloom_Report_ID -> set of toxin classes
+          lab_by_bloom = {}
+          for row in lab_rows:
+              bid = row.get('Bloom_Report_ID')
+              ac  = row.get('Analyte_Class', '')
+              if not bid or not ac or ac in ('Taxa_Dominance', 'Other'):
+                  continue
+              if row.get('Sample_Type') != 'Lab':
+                  continue
+              lab_by_bloom.setdefault(bid, set()).add(ac)
+
+          blooms = []
+          skipped = 0
+          for row in bloom_rows:
+              try:
+                  lat = float(row.get('Bloom_Latitude') or '')
+                  lon = float(row.get('Bloom_Longitude') or row.get('Bloom Longitude') or '')
+              except (TypeError, ValueError):
+                  skipped += 1
+                  continue
+              import math
+              if math.isnan(lat) or math.isnan(lon):
+                  skipped += 1
+                  continue
+              detail = (row.get('Advisory_Detail_Description') or '') + (row.get('AdvisoryDetail') or '')
+              bid = row.get('Bloom_Report_ID')
+              lab_linked = (row.get('Lab_Data_Linked_to_Bloom') or '').upper() == 'YES'
+              lab_toxins = sorted(lab_by_bloom.get(bid, set()))
+              blooms.append({
+                  'id':             clean(row.get('Bloom_Report_ID')),
+                  'cid':            clean(row.get('Case_ID')),
+                  'name':           clean(row.get('Water_Body_Name')) or clean(row.get('Official_Water_Body_Name')),
+                  'county':         clean(row.get('County')),
+                  'rwb':            clean(row.get('Regional_Water_Board')),
+                  'lat': lat, 'lon': lon,
+                  'obs':            clean(row.get('Observation_Date')),
+                  'status':         clean(row.get('Case_Status')),
+                  'adv':            clean(row.get('Reported_Advisory_Types')),
+                  'detail':         clean(row.get('Advisory_Detail_Description')) or clean(row.get('AdvisoryDetail')),
+                  'size':           clean(row.get('Bloom_Size')),
+                  'texture':        clean(row.get('Bloom_Texture')),
+                  'location':       clean(row.get('Bloom_Location')),
+                  'landmark':       clean(row.get('Landmark')),
+                  'wtype':          clean(row.get('Water_Body_Type')),
+                  'wuse':           clean(row.get('Water_Body_Use')),
+                  'drinking_water': (row.get('Drinking_Water_Source') or '').strip().lower() == 'yes',
+                  'illness':        bool(re.search(r'illness|sick', detail, re.I)),
+                  'toxin_suspected':bool(TOXIN_RE.search(detail)),
+                  'lab_verified':   lab_linked or len(lab_toxins) > 0,
+                  'lab_toxins':     lab_toxins,
+              })
+
+          print(f'Built {len(blooms)} records ({skipped} skipped, no coords)')
+          with open('docs/blooms.json', 'w') as f:
+              json.dump(blooms, f, separators=(',', ':'))
+          print('Wrote docs/blooms.json')
+          EOF
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/blooms.json
+          if git diff --cached --quiet; then
+            echo "No changes to blooms.json"
+          else
+            git commit -m "Update blooms.json from CA Open Data [skip ci]"
+            git push
+          fi
