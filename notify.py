@@ -36,10 +36,17 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 log = logging.getLogger(__name__)
 
-SUPABASE_URL       = os.environ['SUPABASE_URL']
-SUPABASE_KEY       = os.environ['SUPABASE_SERVICE_KEY']
-SMTP_HOST          = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
-SMTP_PORT          = int(os.environ.get('SMTP_PORT', 587))
+def _require_env(name):
+    v = os.environ.get(name, '').strip()
+    if not v:
+        raise SystemExit(f"ERROR: required secret '{name}' is missing or empty. "
+                         f"Set it in GitHub → Settings → Secrets and variables → Actions.")
+    return v
+
+SUPABASE_URL       = _require_env('SUPABASE_URL')
+SUPABASE_KEY       = _require_env('SUPABASE_SERVICE_KEY')
+SMTP_HOST          = os.environ.get('SMTP_HOST', '').strip() or 'smtp.gmail.com'
+SMTP_PORT          = int(os.environ.get('SMTP_PORT') or 587)
 SMTP_USER          = os.environ.get('SMTP_USER', '')
 SMTP_PASS          = os.environ.get('SMTP_PASS', '')
 FROM_EMAIL         = os.environ.get('FROM_EMAIL', SMTP_USER)
