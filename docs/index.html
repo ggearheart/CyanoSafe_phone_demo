@@ -271,35 +271,46 @@ select.filter{width:100%;padding:5px 7px;border:1px solid var(--border);
         </summary>
         <div style="padding:10px 12px 12px;border-top:1px solid var(--border);">
           <p style="margin:0 0 8px;font-size:.72rem;color:var(--sub);line-height:1.5;">
-            Observed a bloom? Report it to the <strong>CA State Water Board FHAB Program</strong> — reports help protect public health.
+            Observed a bloom? Send it to the <strong>CA State Water Board FHAB Program</strong> for review — reports help protect public health. Required field marked *.
           </p>
 
-          <!-- Quick-report: camera + location pre-fill -->
+          <!-- Quick capture: rear camera + GPS pre-fill (mobile) -->
           <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
-            <div style="font-size:.72rem;font-weight:700;color:#0369a1;margin-bottom:6px;">📸 Quick Report</div>
-            <div style="font-size:.68rem;color:#475569;margin-bottom:8px;">Take a photo and open the report form with your GPS location pre-filled.</div>
+            <div style="font-size:.72rem;font-weight:700;color:#0369a1;margin-bottom:6px;">📸 Photo &amp; location</div>
             <label style="display:block;text-align:center;padding:8px;background:#0369a1;color:#fff;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;margin-bottom:6px;touch-action:manipulation;">
               📷 Take / Choose Photo
               <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handleReportPhoto(this)"/>
             </label>
-            <div id="report-photo-preview" style="display:none;text-align:center;margin-bottom:6px;">
+            <div id="report-photo-preview" style="display:none;text-align:center;margin-bottom:4px;">
               <img id="report-photo-img" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid #bae6fd;" alt="Selected photo"/>
-              <div style="font-size:.65rem;color:#64748b;margin-top:3px;" id="report-photo-name"></div>
             </div>
-            <button id="report-submit-btn" onclick="openReportForm()" style="display:none;width:100%;padding:7px;background:var(--ca-blue);color:#fff;border:none;border-radius:6px;font-size:.75rem;font-weight:700;cursor:pointer;touch-action:manipulation;">
-              Open Report Form with My Location ↗
-            </button>
+            <div id="report-photo-status" style="font-size:.66rem;color:#475569;text-align:center;">Optional — a photo and your GPS location help staff respond.</div>
           </div>
 
-          <a href="https://www.waterboards.ca.gov/water_issues/programs/swamp/freshwater_cyanobacteria.html"
-             target="_blank" rel="noopener"
-             style="display:block;text-align:center;padding:7px;background:var(--ca-blue);color:#fff;border-radius:var(--radius);font-size:.75rem;font-weight:700;text-decoration:none;margin-bottom:10px;">
-            Open FHAB Reporting Page ↗
-          </a>
-          <div style="text-align:center;">
-            <div id="report-qr" style="display:inline-block;"></div>
-            <div style="font-size:.65rem;color:var(--sub);margin-top:4px;">Scan to open on your phone</div>
-          </div>
+          <form id="bloomForm" onsubmit="return submitBloomReport(event)" style="display:flex;flex-direction:column;gap:6px;font-size:.72rem;">
+            <input id="rf_wb" required placeholder="Water body name *" class="filter" style="margin:0;padding:7px;">
+            <input id="rf_county" list="rf_counties" placeholder="County" class="filter" style="margin:0;padding:7px;">
+            <datalist id="rf_counties"></datalist>
+            <input id="rf_landmark" placeholder="Landmark / nearest access" class="filter" style="margin:0;padding:7px;">
+            <input type="hidden" id="rf_lat"><input type="hidden" id="rf_lon">
+            <input id="rf_date" type="date" class="filter" style="margin:0;padding:7px;">
+            <select id="rf_size" class="filter" style="margin:0;padding:7px;">
+              <option value="">Bloom size…</option>
+              <option>larger than a football field</option>
+              <option>between a football field and a tennis court</option>
+              <option>between a tennis court and a sedan</option>
+              <option>smaller than a sedan</option>
+              <option>no bloom</option>
+            </select>
+            <textarea id="rf_desc" placeholder="What did you see? (color, scum, smell…)" rows="2" class="filter" style="margin:0;padding:7px;resize:vertical;"></textarea>
+            <input id="rf_name" placeholder="Your name (optional)" class="filter" style="margin:0;padding:7px;">
+            <input id="rf_email" type="email" placeholder="Your email (optional)" class="filter" style="margin:0;padding:7px;">
+            <input id="rf_website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;">
+            <button type="submit" style="padding:9px;background:var(--ca-blue);color:#fff;border:0;border-radius:var(--radius);font-size:.78rem;font-weight:700;cursor:pointer;touch-action:manipulation;">Submit report</button>
+            <div id="rf_status" style="font-size:.7rem;line-height:1.4;"></div>
+          </form>
+          <p style="margin:8px 0 0;font-size:.66rem;color:var(--sub);">Or use the official
+            <a href="https://mywaterquality.ca.gov/habs/bloom-report/" target="_blank" rel="noopener" style="color:var(--ca-blue);">Report a HAB</a> form.</p>
         </div>
       </details>
       <div class="sb-label">Bloom Reports <span id="listCount" style="font-weight:400;color:var(--sub)"></span></div>
@@ -1138,9 +1149,20 @@ function locateMe(){
   );
 }
 
-// ── BLOOM REPORT (camera + location pre-fill) ─────────────────────────────────
-let _reportPhotoFile = null;
-let _reportLat = null, _reportLon = null;
+// ── BLOOM REPORT (in-app submission to the FHAB intake API) ───────────────────
+// Endpoint is configurable: set window.FHAB_INTAKE_URL or localStorage 'fhab_intake_url'.
+// An optional shared key (server PUBLIC_INTAKE_KEY) goes in window.FHAB_INTAKE_KEY.
+const FHAB_INTAKE_URL = (window.FHAB_INTAKE_URL || localStorage.getItem('fhab_intake_url') || 'https://fhab-web.onrender.com');
+const FHAB_INTAKE_KEY = (window.FHAB_INTAKE_KEY || localStorage.getItem('fhab_intake_key') || '');
+const FHAB_COUNTIES = ["Alameda","Alpine","Amador","Butte","Calaveras","Colusa","Contra Costa","Del Norte","El Dorado","Fresno","Glenn","Humboldt","Imperial","Inyo","Kern","Kings","Lake","Lassen","Los Angeles","Madera","Marin","Mariposa","Mendocino","Merced","Modoc","Mono","Monterey","Napa","Nevada","Orange","Placer","Plumas","Riverside","Sacramento","San Benito","San Bernardino","San Diego","San Francisco","San Joaquin","San Luis Obispo","San Mateo","Santa Barbara","Santa Clara","Santa Cruz","Shasta","Sierra","Siskiyou","Solano","Sonoma","Stanislaus","Sutter","Tehama","Trinity","Tulare","Tuolumne","Ventura","Yolo","Yuba"];
+let _reportPhotoFile = null, _reportPhotoDataUrl = null;
+(function(){
+  const dl = document.getElementById('rf_counties');
+  if(dl) dl.innerHTML = FHAB_COUNTIES.map(c=>`<option value="${c}">`).join('');
+  const d = document.getElementById('rf_date');
+  if(d) d.value = new Date().toISOString().slice(0,10);
+})();
+function rfVal(id){ const el=document.getElementById(id); return el ? el.value.trim() : ''; }
 
 function handleReportPhoto(input){
   const file = input.files[0];
@@ -1148,43 +1170,56 @@ function handleReportPhoto(input){
   _reportPhotoFile = file;
   const preview = document.getElementById('report-photo-preview');
   const img     = document.getElementById('report-photo-img');
-  const name    = document.getElementById('report-photo-name');
-  const btn     = document.getElementById('report-submit-btn');
+  const status  = document.getElementById('report-photo-status');
   img.src = URL.createObjectURL(file);
-  name.textContent = file.name;
   preview.style.display = 'block';
-  btn.style.display = 'block';
-  btn.textContent = 'Getting your location…';
-  btn.disabled = true;
-  // Grab GPS now so it's ready when user taps submit
+  const fr = new FileReader(); fr.onload = () => { _reportPhotoDataUrl = fr.result; }; fr.readAsDataURL(file);
+  status.textContent = '📷 photo attached · getting location…';
+  // Grab GPS now so it's attached on submit.
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(
       pos => {
-        _reportLat = pos.coords.latitude.toFixed(6);
-        _reportLon = pos.coords.longitude.toFixed(6);
-        btn.textContent = 'Open Report Form with My Location ↗';
-        btn.disabled = false;
+        document.getElementById('rf_lat').value = pos.coords.latitude.toFixed(6);
+        document.getElementById('rf_lon').value = pos.coords.longitude.toFixed(6);
+        status.textContent = '📷 photo attached · 📍 ' + pos.coords.latitude.toFixed(4) + ', ' + pos.coords.longitude.toFixed(4);
       },
-      () => {
-        _reportLat = null; _reportLon = null;
-        btn.textContent = 'Open Report Form ↗';
-        btn.disabled = false;
-      },
+      () => { status.textContent = '📷 photo attached · location unavailable'; },
       {enableHighAccuracy:true, timeout:10000}
     );
-  } else {
-    btn.textContent = 'Open Report Form ↗';
-    btn.disabled = false;
-  }
+  } else { status.textContent = '📷 photo attached'; }
 }
 
-function openReportForm(){
-  const base = 'https://www.waterboards.ca.gov/water_issues/programs/swamp/freshwater_cyanobacteria.html';
-  let url = base;
-  if(_reportLat && _reportLon){
-    url += `?lat=${_reportLat}&lon=${_reportLon}`;
-  }
-  window.open(url, '_blank', 'noopener');
+async function submitBloomReport(e){
+  e.preventDefault();
+  const st = document.getElementById('rf_status');
+  st.style.color = 'var(--sub)'; st.textContent = 'Sending…';
+  const payload = {
+    water_body_name: rfVal('rf_wb'), county: rfVal('rf_county'), landmark: rfVal('rf_landmark'),
+    latitude: rfVal('rf_lat')||null, longitude: rfVal('rf_lon')||null,
+    observation_date: rfVal('rf_date'), bloom_size: rfVal('rf_size'),
+    description: rfVal('rf_desc'), reporter_name: rfVal('rf_name'), reporter_email: rfVal('rf_email'),
+    website: rfVal('rf_website'), source: 'cyanosafe-pwa'
+  };
+  if(_reportPhotoDataUrl){ payload.photo_base64 = _reportPhotoDataUrl;
+    payload.photo_content_type = (_reportPhotoFile && _reportPhotoFile.type) || 'image/jpeg'; }
+  try{
+    const headers = {'Content-Type':'application/json'};
+    if(FHAB_INTAKE_KEY) headers['X-API-Key'] = FHAB_INTAKE_KEY;
+    const r = await fetch(FHAB_INTAKE_URL.replace(/\/$/,'') + '/api/public/reports',
+      {method:'POST', headers, body:JSON.stringify(payload)});
+    const j = await r.json().catch(()=>({}));
+    if(r.ok && j.ok){
+      st.style.color = '#1c7a3f';
+      st.textContent = j.message || 'Thank you — your report was received for review.';
+      document.getElementById('bloomForm').reset();
+      _reportPhotoFile = null; _reportPhotoDataUrl = null;
+      document.getElementById('report-photo-preview').style.display = 'none';
+      document.getElementById('report-photo-status').textContent = 'Optional — a photo and your GPS location help staff respond.';
+    } else {
+      st.style.color = '#b00'; st.textContent = 'Could not submit' + (j.error ? ': ' + j.error : '.');
+    }
+  }catch(err){ st.style.color = '#b00'; st.textContent = 'Network error — please try again.'; }
+  return false;
 }
 
 // ── TREND COMPUTATION ─────────────────────────────────────────────────────────

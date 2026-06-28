@@ -1,4 +1,4 @@
-const CACHE = 'cyanosafe-v3';
+const CACHE = 'cyanosafe-v4';   // bump on shell change so installed PWAs re-cache index.html
 const DATA_CACHE = 'cyanosafe-data-v1';
 const SHELL = [
   '/CyanoSafe_phone_demo/',
